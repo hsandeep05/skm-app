@@ -104,22 +104,22 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
           }}
         />
 
-        <div className="relative p-5 pl-6">
-          <div className="flex items-start justify-between gap-3">
+        <div className="relative p-3 pl-4 sm:p-5 sm:pl-6">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
               <p
-                className="text-[11px] font-bold uppercase tracking-[0.1em] truncate"
+                className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.08em] sm:tracking-[0.1em] truncate"
                 style={{ color: accentColor }}
               >
                 {title}
               </p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground mt-2 tracking-tight truncate leading-none">
+              <p className="text-sm sm:text-xl md:text-2xl font-extrabold text-foreground mt-1 sm:mt-2 tracking-tight truncate leading-none">
                 {value}
               </p>
             </div>
             {/* Circular icon with glow */}
             <div
-              className="relative h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0
+              className="relative h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0
                           transition-all duration-300"
               style={{
                 background: `linear-gradient(135deg, ${accentColor}${hovered ? '25' : '18'}, ${accentColor}${hovered ? '12' : '08'})`,
@@ -134,7 +134,7 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
                 className="absolute inset-[2px] rounded-full border transition-colors duration-300"
                 style={{ borderColor: `${accentColor}${hovered ? '35' : '20'}` }}
               />
-              <div style={{ color: accentColor }}>{icon}</div>
+              <div className="scale-75 sm:scale-100" style={{ color: accentColor }}>{icon}</div>
             </div>
           </div>
         </div>
@@ -301,7 +301,7 @@ export function Analytics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
         {summaryCards.map((card, idx) => (
           <SummaryCard key={idx} {...card} />
         ))}

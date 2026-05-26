@@ -144,18 +144,20 @@ export function InvoicePreview({ data, showDownload = false }: { data: InvoiceDa
         {/* Financial Totals */}
         <div className="flex justify-end mb-3">
           <div className="w-48 text-xs">
-            <div className="flex justify-between py-1 text-gray-600">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(data.subtotal)}</span>
-            </div>
+            {data.discount > 0 && (
+              <div className="flex justify-between py-1 text-gray-600">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(data.subtotal)}</span>
+              </div>
+            )}
             {data.discount > 0 && (
               <div className="flex justify-between py-1 text-gray-600">
                 <span>Discount:</span>
                 <span>-{formatCurrency(data.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between py-1 font-bold border-t border-gray-300" style={{ color: '#1E3A8A' }}>
-              <span>Grand Total:</span>
+            <div className={`flex justify-between py-1 font-bold ${data.discount > 0 ? 'border-t border-gray-300' : ''}`} style={{ color: '#1E3A8A' }}>
+              <span>{data.discount > 0 ? 'Grand Total:' : 'Total:'}</span>
               <span>{formatCurrency(data.grandTotal)}</span>
             </div>
             <div className="flex justify-between py-1 text-gray-600">
