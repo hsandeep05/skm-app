@@ -24,6 +24,7 @@ export interface InvoiceData {
   grandTotal: number
   amountPaid: number
   balanceDue: number
+  shopLogo?: string | null
 }
 
 function formatCurrency(amount: number): string {
@@ -68,16 +69,21 @@ export function InvoicePreview({ data, showDownload = false }: { data: InvoiceDa
       >
         {/* Header */}
         <div className="flex justify-between items-start mb-1">
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1E3A8A' }}>
-              SRI Krishna Mobiles
-            </h1>
-            <p className="text-[10px] mt-0.5" style={{ color: '#60A5FA' }}>
-              Near Chowk bazar, MainRoad, Narayanpet
-            </p>
-            <p className="text-[10px]" style={{ color: '#60A5FA' }}>
-              Your Trusted Mobile Service Center
-            </p>
+          <div className="flex items-center gap-2">
+            {data.shopLogo && (
+              <img src={data.shopLogo} alt="Logo" className="h-10 w-10 object-contain rounded" />
+            )}
+            <div>
+              <h1 className="text-xl font-bold" style={{ color: '#1E3A8A' }}>
+                SRI Krishna Mobiles
+              </h1>
+              <p className="text-[10px] mt-0.5" style={{ color: '#60A5FA' }}>
+                Near Chowk bazar, MainRoad, Narayanpet
+              </p>
+              <p className="text-[10px]" style={{ color: '#60A5FA' }}>
+                Your Trusted Mobile Service Center
+              </p>
+            </div>
           </div>
           <div className="text-right">
             <span className="text-xs font-bold tracking-wider" style={{ color: '#1E3A8A' }}>

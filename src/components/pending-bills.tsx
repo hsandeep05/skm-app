@@ -81,8 +81,17 @@ export function PendingBills() {
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [finalizingId, setFinalizingId] = useState<string | null>(null)
+  const [shopLogo, setShopLogo] = useState<string | null>(null)
   const { lastEvent } = useRealtime()
   const { toast } = useToast()
+
+  // Load shop logo
+  useEffect(() => {
+    fetch('/api/logo')
+      .then(res => res.json())
+      .then(d => { if (d.logo) setShopLogo(d.logo) })
+      .catch(() => {})
+  }, [])
 
   const fetchPendingBills = useCallback(async () => {
     try {
@@ -154,6 +163,7 @@ export function PendingBills() {
       grandTotal: bill.grandTotal,
       amountPaid: bill.amountPaid,
       balanceDue: bill.balanceDue,
+      shopLogo,
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)

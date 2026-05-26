@@ -48,6 +48,7 @@ export default function SriKrishnaApp() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [stickyBottomBar, setStickyBottomBar] = useState(true)
+  const [shopLogo, setShopLogo] = useState<string | null>(null)
   const { theme, setTheme } = useTheme()
 
   // Check session on mount
@@ -113,11 +114,11 @@ export default function SriKrishnaApp() {
       case 'pending':
         return <PendingBills />
       case 'billing':
-        return <Billing />
+        return <Billing shopLogo={shopLogo} />
       case 'analytics':
         return <Analytics />
       case 'settings':
-        return <SettingsPage currentUser={user} onLogout={handleLogout} stickyBottomBar={stickyBottomBar} onStickyBottomBarChange={setStickyBottomBar} />
+        return <SettingsPage currentUser={user} onLogout={handleLogout} stickyBottomBar={stickyBottomBar} onStickyBottomBarChange={setStickyBottomBar} onLogoChange={setShopLogo} />
     }
   }
 

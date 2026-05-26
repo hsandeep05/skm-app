@@ -1,25 +1,25 @@
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Multiple UI fixes and feature additions
+Task: Move Clear All Data to hidden admin, add logo option, hide floating preview button
 
 Work Log:
-- Made Cost Price field masked (password type) by default with Eye/EyeOff toggle to reveal in billing.tsx
-- Added visibleCostPrices state (Set<string>) to track which cost price fields are unmasked
-- Fixed mobile view dashboard metric cards - smaller padding, font sizes on mobile, responsive grid
-- Fixed MetricCard component: p-3 sm:p-5, text-lg sm:text-3xl, h-9 w-9 sm:h-12 sm:w-12 icons
-- Added "Clear All Data" section in Settings with admin password confirmation
-- Created /api/clear-data endpoint to delete all invoices, items, and reset counters
-- Added "Sticky Bottom Bar" toggle in Settings (mobile only) with on/off button
-- Updated page.tsx to support stickyBottomBar state and pass to Settings
-- Mobile bottom bar now uses stickyBottomBar state: fixed when on, sticky when off
-- Cleared all existing test data from the database (invoices, items, counters all deleted)
-- Hidden admin panel still accessible via 5-tap on version number for adding new counters
-- Lint passes with no errors
+- Removed floating Eye/preview button from billing.tsx mobile view
+- Moved "Clear All Data" section inside the hidden admin panel (5-tap to unlock)
+- Clear All Data still requires admin password confirmation before deleting
+- Added Setting model to Prisma schema (key-value store for app settings)
+- Created /api/logo API endpoint (GET, POST, DELETE) for shop logo management
+- Added "Shop Logo" upload section inside hidden admin panel in Settings
+  - Upload image (max 500KB, any image format)
+  - Preview with remove button
+  - Logo stored as base64 in database via Setting model
+- Updated InvoicePreview to accept and display shopLogo in invoice header
+- Updated Billing, Dashboard, PendingBills components to pass shopLogo to invoice previews
+- Added shopLogo state management in page.tsx with onLogoChange callback
+- All lint checks pass
 
 Stage Summary:
-- Cost Price fields are now masked like passwords by default, with eye toggle to show/hide
-- Mobile view cards properly sized with responsive breakpoints
-- Clear All Data option added in Settings (requires admin password)
-- Sticky Bottom Bar toggle added in Settings (mobile only)
-- All test data cleared - fresh start from zero
+- Floating preview button removed from mobile billing view
+- Clear All Data is now hidden behind 5-tap admin unlock + requires password
+- Shop Logo upload available in hidden admin panel (appears on invoices)
+- Logo stored in database, loaded on app startup

@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Database,
   Navigation,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +40,7 @@ interface SettingsPageProps {
   onLogout?: () => void
   stickyBottomBar?: boolean
   onStickyBottomBarChange?: (value: boolean) => void
+  onLogoChange?: (logo: string | null) => void
 }
 
 interface UserItem {
@@ -49,10 +51,11 @@ interface UserItem {
   createdAt: string
 }
 
-export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, onStickyBottomBarChange }: SettingsPageProps) {
+export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, onStickyBottomBarChange, onLogoChange }: SettingsPageProps) {
   const [exporting, setExporting] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const { theme, setTheme } = useTheme()
   const { toast } = useToast()
 
@@ -80,6 +83,23 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
   const [showClearPassword, setShowClearPassword] = useState(false)
   const [clearingData, setClearingData] = useState(false)
 
+  // Logo states
+  const [shopLogo, setShopLogo] = useState<string | null>(null)
+  const [savingLogo, setSavingLogo] = useState(false)
+
+  // Load logo on mount
+  useEffect(() => {
+    fetch('/api/logo')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo) {
+          setShopLogo(data.logo)
+          onLogoChange?.(data.logo)
+        }
+      })
+      .catch(() => {})
+  }, [onLogoChange])
+
   // Hidden tap to reveal admin
   const handleVersionTap = () => {
     if (tapTimerRef.current) clearTimeout(tapTimerRef.current)
@@ -93,7 +113,7 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
       if (currentUser?.role === 'admin') {
         fetchUsers()
       }
-      toast({ title: 'Admin Panel Unlocked', description: 'You now have access to user management' })
+      toast({ title: 'Admin Panel Unlocked', description: 'You now have access to admin features' })
     } else {
       tapTimerRef.current = setTimeout(() => setTapCount(0), 2000)
     }
@@ -197,6 +217,61 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
       toast({ title: 'Error', description: 'Failed to clear data', variant: 'destructive' })
     } finally {
       setClearingData(false)
+    }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid File', description: 'Please upload an image file (PNG, JPG, etc.)', variant: 'destructive' })
+      return
+    }
+
+    // Validate file size (max 500KB)
+    if (file.size > 500 * 1024) {
+      toast({ title: 'File Too Large', description: 'Logo must be under 500KB', variant: 'destructive' })
+      return
+    }
+
+    setSavingLogo(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const base64 = reader.result as string
+        const res = await fetch('/api/logo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ logo: base64 }),
+        })
+        if (res.ok) {
+          setShopLogo(base64)
+          onLogoChange?.(base64)
+          toast({ title: 'Logo Updated', description: 'Shop logo has been saved and will appear on invoices' })
+        } else {
+          toast({ title: 'Failed', description: 'Could not save logo', variant: 'destructive' })
+        }
+        setSavingLogo(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to upload logo', variant: 'destructive' })
+      setSavingLogo(false)
+    }
+
+    if (logoInputRef.current) logoInputRef.current.value = ''
+  }
+
+  const handleRemoveLogo = async () => {
+    try {
+      await fetch('/api/logo', { method: 'DELETE' })
+      setShopLogo(null)
+      onLogoChange?.(null)
+      toast({ title: 'Logo Removed', description: 'Shop logo has been removed from invoices' })
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to remove logo', variant: 'destructive' })
     }
   }
 
@@ -545,104 +620,7 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
         </div>
       </motion.div>
 
-      {/* Clear All Data Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.15 }}
-      >
-        <div className="relative overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF4444] to-[#F87171]" />
-          <div
-            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
-            style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
-          />
-          <div className="p-5 pl-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-[#EF4444]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#EF444440]">
-                <Database className="h-5 w-5 text-[#EF4444]" />
-              </div>
-              <div>
-                <h3 className="text-foreground font-bold text-base">Clear All Data</h3>
-                <p className="text-muted-foreground text-xs mt-0.5">Reset all invoices and amounts to zero</p>
-              </div>
-            </div>
-
-            {!showClearConfirm ? (
-              <Button
-                variant="outline"
-                className="w-full h-11 border-[#EF4444]/40 text-[#F87171] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/60 hover:text-foreground gap-2.5 transition-all duration-200 shadow-sm"
-                onClick={() => setShowClearConfirm(true)}
-              >
-                <Trash2 className="h-4.5 w-4.5" /> Clear All Invoice Data
-              </Button>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-background rounded-xl p-4 border border-[#EF4444]/20 space-y-3 shadow-sm"
-              >
-                <div className="flex items-center gap-2 text-[#EF4444]">
-                  <AlertTriangle className="h-5 w-5" />
-                  <p className="text-sm font-bold">This will permanently delete ALL invoice data!</p>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  This action cannot be undone. All invoices, items, and counters will be deleted. Please backup first if needed.
-                </p>
-                <div>
-                  <Label className="text-destructive text-[10px] font-medium flex items-center gap-1">
-                    <Shield className="h-3 w-3" /> Admin Password (required)
-                  </Label>
-                  <div className="relative mt-1">
-                    <Input
-                      type={showClearPassword ? 'text' : 'password'}
-                      value={clearAdminPassword}
-                      onChange={(e) => setClearAdminPassword(e.target.value)}
-                      placeholder="Enter your admin password"
-                      className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm pr-10 focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20 transition-all duration-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowClearPassword(!showClearPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showClearPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm h-9"
-                    onClick={() => {
-                      setShowClearConfirm(false)
-                      setClearAdminPassword('')
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="flex-1 gap-1 text-sm h-9"
-                    disabled={clearingData || !clearAdminPassword}
-                    onClick={handleClearAllData}
-                  >
-                    {clearingData ? (
-                      <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                    {clearingData ? 'Clearing...' : 'Clear All Data'}
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Hidden Admin Panel - User Management */}
+      {/* Hidden Admin Panel - Only visible after 5 taps on version */}
       <AnimatePresence>
         {showAdmin && currentUser?.role === 'admin' && (
           <motion.div
@@ -650,236 +628,429 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
+            className="space-y-6"
           >
-            <div className="relative overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF4444] to-[#F87171]" />
-              <div
-                className="absolute -top-16 -right-16 w-44 h-44 rounded-full opacity-[0.08] dark:opacity-[0.12] pointer-events-none blur-2xl"
-                style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
-              />
-              <div
-                className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full opacity-[0.04] dark:opacity-[0.06] pointer-events-none blur-2xl"
-                style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
-              />
-              <div className="p-5 pl-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-[#EF4444]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#EF444440]">
-                      <Shield className="h-5 w-5 text-[#EF4444]" />
+            {/* Admin Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-[#EF4444]" />
+                <h2 className="text-foreground font-bold text-lg">Admin Panel</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAdmin(false)
+                  setShowClearConfirm(false)
+                  setShowNewUserForm(false)
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Hide
+              </Button>
+            </div>
+
+            {/* Logo Upload Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="relative overflow-hidden rounded-2xl border border-[#F59E0B]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#F59E0B] to-[#FBBF24]" />
+                <div
+                  className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+                  style={{ background: 'radial-gradient(circle, #F59E0B, transparent 70%)' }}
+                />
+                <div className="p-5 pl-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#F59E0B]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#F59E0B40]">
+                      <ImageIcon className="h-5 w-5 text-[#F59E0B]" />
+                    </div>
+                    <div>
+                      <h3 className="text-foreground font-bold text-base">Shop Logo</h3>
+                      <p className="text-muted-foreground text-xs mt-0.5">Appears on invoice header (max 500KB)</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {/* Logo Preview */}
+                    {shopLogo ? (
+                      <div className="relative group">
+                        <div className="h-20 w-20 rounded-xl border border-border bg-white flex items-center justify-center overflow-hidden shadow-sm">
+                          <img src={shopLogo} alt="Shop Logo" className="h-16 w-16 object-contain" />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={handleRemoveLogo}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="h-20 w-20 rounded-xl border border-dashed border-[#F59E0B]/40 bg-[#F59E0B]/5 flex items-center justify-center">
+                        <ImageIcon className="h-8 w-8 text-[#F59E0B]/30" />
+                      </div>
+                    )}
+
+                    <div className="flex-1 space-y-2">
+                      <Button
+                        variant="outline"
+                        className="w-full h-10 border-[#F59E0B]/40 text-[#FBBF24] hover:bg-[#F59E0B]/10 hover:border-[#F59E0B]/60 hover:text-foreground gap-2 transition-all duration-200 shadow-sm"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={savingLogo}
+                      >
+                        {savingLogo ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-[#F59E0B] border-t-transparent rounded-full" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                        {savingLogo ? 'Saving...' : shopLogo ? 'Change Logo' : 'Upload Logo'}
+                      </Button>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                      />
+                      {shopLogo && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-destructive hover:bg-destructive/10 gap-1"
+                          onClick={handleRemoveLogo}
+                        >
+                          <Trash2 className="h-3 w-3" /> Remove Logo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* User Management */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.05 }}
+            >
+              <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
+                <div
+                  className="absolute -top-16 -right-16 w-44 h-44 rounded-full opacity-[0.08] dark:opacity-[0.12] pointer-events-none blur-2xl"
+                  style={{ background: 'radial-gradient(circle, #7C3AED, transparent 70%)' }}
+                />
+                <div className="p-5 pl-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#7C3AED40]">
+                      <Users className="h-5 w-5 text-[#7C3AED]" />
                     </div>
                     <div>
                       <h3 className="text-foreground font-bold text-base">User Management</h3>
-                      <p className="text-[#EF4444]/70 text-xs mt-0.5 font-medium">Admin only • Tap version 5 times to unlock</p>
+                      <p className="text-muted-foreground text-xs mt-0.5">Add new counters / operators</p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAdmin(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Hide
-                  </Button>
-                </div>
 
-                {/* Existing Users */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Registered Users ({users.length})
-                    </span>
-                  </div>
-
-                  {loadingUsers ? (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="animate-spin h-5 w-5 border-2 border-[#7C3AED] border-t-transparent rounded-full" />
+                  {/* Existing Users */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Registered Users ({users.length})
+                      </span>
                     </div>
-                  ) : users.length === 0 ? (
-                    <p className="text-muted-foreground text-xs text-center py-4">No users found</p>
-                  ) : (
-                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                      {users.map((u) => (
-                        <div
-                          key={u.id}
-                          className="flex items-center justify-between bg-background rounded-xl p-3 border border-border hover:border-[#EF4444]/20 transition-all duration-200"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm ${
-                              u.role === 'admin'
-                                ? 'bg-gradient-to-br from-[#7C3AED]/25 to-[#A78BFA]/15 text-[#7C3AED]'
-                                : 'bg-gradient-to-br from-[#3B82F6]/25 to-[#60A5FA]/15 text-[#3B82F6]'
-                            }`}>
-                              {u.username[0].toUpperCase()}
+
+                    {loadingUsers ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin h-5 w-5 border-2 border-[#7C3AED] border-t-transparent rounded-full" />
+                      </div>
+                    ) : users.length === 0 ? (
+                      <p className="text-muted-foreground text-xs text-center py-4">No users found</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                        {users.map((u) => (
+                          <div
+                            key={u.id}
+                            className="flex items-center justify-between bg-background rounded-xl p-3 border border-border hover:border-[#7C3AED]/20 transition-all duration-200"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm ${
+                                u.role === 'admin'
+                                  ? 'bg-gradient-to-br from-[#7C3AED]/25 to-[#A78BFA]/15 text-[#7C3AED]'
+                                  : 'bg-gradient-to-br from-[#3B82F6]/25 to-[#60A5FA]/15 text-[#3B82F6]'
+                              }`}>
+                                {u.username[0].toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-foreground text-xs font-semibold">{u.username}</p>
+                                <p className="text-muted-foreground text-[10px] flex items-center gap-1">
+                                  <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-bold ${
+                                    u.role === 'admin' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'bg-[#3B82F6]/10 text-[#3B82F6]'
+                                  }`}>
+                                    {u.role === 'admin' ? 'Admin' : 'Operator'}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{u.counterName || 'No counter'}</span>
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-foreground text-xs font-semibold">{u.username}</p>
-                              <p className="text-muted-foreground text-[10px] flex items-center gap-1">
-                                <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-bold ${
-                                  u.role === 'admin' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'bg-[#3B82F6]/10 text-[#3B82F6]'
-                                }`}>
-                                  {u.role === 'admin' ? 'Admin' : 'Operator'}
-                                </span>
-                                <span>•</span>
-                                <span>{u.counterName || 'No counter'}</span>
-                              </p>
-                            </div>
-                          </div>
-                          {u.id !== currentUser?.id && (
-                            deleteConfirmId === u.id ? (
-                              <div className="flex items-center gap-1.5">
+                            {u.id !== currentUser?.id && (
+                              deleteConfirmId === u.id ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-[10px] text-muted-foreground hover:text-foreground px-2"
+                                    onClick={() => setDeleteConfirmId(null)}
+                                  >
+                                    No
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="h-7 text-[10px] px-2 gap-1"
+                                    onClick={() => handleDeleteUser(u.id, u.username)}
+                                  >
+                                    <AlertTriangle className="h-3 w-3" /> Delete
+                                  </Button>
+                                </div>
+                              ) : (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-[10px] text-muted-foreground hover:text-foreground px-2"
-                                  onClick={() => setDeleteConfirmId(null)}
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+                                  onClick={() => setDeleteConfirmId(u.id)}
                                 >
-                                  No
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="h-7 text-[10px] px-2 gap-1"
-                                  onClick={() => handleDeleteUser(u.id, u.username)}
-                                >
-                                  <AlertTriangle className="h-3 w-3" /> Delete
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
-                                onClick={() => setDeleteConfirmId(u.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            )
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Add New User */}
-                {!showNewUserForm ? (
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 border-[#7C3AED]/40 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:border-[#7C3AED]/60 hover:text-foreground gap-2 transition-all duration-200 shadow-sm"
-                    onClick={() => setShowNewUserForm(true)}
-                  >
-                    <Plus className="h-4 w-4" /> Add New Counter / User
-                  </Button>
-                ) : (
-                  <motion.form
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onSubmit={handleCreateUser}
-                    className="bg-background rounded-xl p-4 border border-[#7C3AED]/20 space-y-3 shadow-sm"
-                  >
-                    <h4 className="text-foreground text-xs font-semibold flex items-center gap-1.5">
-                      <Plus className="h-3.5 w-3.5 text-[#7C3AED]" /> New User Credentials
-                    </h4>
-                    <div>
-                      <Label className="text-muted-foreground text-[10px] font-medium">Username</Label>
-                      <Input
-                        value={newUsername}
-                        onChange={(e) => setNewUsername(e.target.value)}
-                        placeholder="e.g., counter2"
-                        required
-                        className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-[10px] font-medium">Password</Label>
-                      <Input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Min 4 characters"
-                        required
-                        className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-muted-foreground text-[10px] font-medium">Role</Label>
-                        <select
-                          value={newRole}
-                          onChange={(e) => setNewRole(e.target.value)}
-                          className="w-full h-9 text-sm bg-card border border-border text-foreground rounded-md px-2 focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
-                        >
-                          <option value="operator">Operator</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                              )
+                            )}
+                          </div>
+                        ))}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Add New User */}
+                  {!showNewUserForm ? (
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 border-[#7C3AED]/40 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:border-[#7C3AED]/60 hover:text-foreground gap-2 transition-all duration-200 shadow-sm"
+                      onClick={() => setShowNewUserForm(true)}
+                    >
+                      <Plus className="h-4 w-4" /> Add New Counter / User
+                    </Button>
+                  ) : (
+                    <motion.form
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onSubmit={handleCreateUser}
+                      className="bg-background rounded-xl p-4 border border-[#7C3AED]/20 space-y-3 shadow-sm"
+                    >
+                      <h4 className="text-foreground text-xs font-semibold flex items-center gap-1.5">
+                        <Plus className="h-3.5 w-3.5 text-[#7C3AED]" /> New User Credentials
+                      </h4>
                       <div>
-                        <Label className="text-muted-foreground text-[10px] font-medium">Counter Name</Label>
+                        <Label className="text-muted-foreground text-[10px] font-medium">Username</Label>
                         <Input
-                          value={newCounterName}
-                          onChange={(e) => setNewCounterName(e.target.value)}
-                          placeholder="e.g., Counter 2"
+                          value={newUsername}
+                          onChange={(e) => setNewUsername(e.target.value)}
+                          placeholder="e.g., counter2"
+                          required
                           className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
                         />
                       </div>
-                    </div>
-                    <Separator className="bg-border" />
-                    <div>
-                      <Label className="text-destructive text-[10px] font-medium flex items-center gap-1">
-                        <Shield className="h-3 w-3" /> Your Admin Password (required)
-                      </Label>
-                      <div className="relative">
+                      <div>
+                        <Label className="text-muted-foreground text-[10px] font-medium">Password</Label>
                         <Input
-                          type={showAdminPassword ? 'text' : 'password'}
-                          value={adminPassword}
-                          onChange={(e) => setAdminPassword(e.target.value)}
-                          placeholder="Enter your admin password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Min 4 characters"
                           required
-                          className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm pr-10 focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20 transition-all duration-200"
+                          className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {showAdminPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm h-9"
-                        onClick={() => {
-                          setShowNewUserForm(false)
-                          setNewUsername('')
-                          setNewPassword('')
-                          setNewRole('operator')
-                          setNewCounterName('')
-                          setAdminPassword('')
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1 text-sm h-9 shadow-[0_0_12px_-4px_#7C3AED40]"
-                        disabled={creatingUser}
-                      >
-                        {creatingUser ? (
-                          <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
-                        ) : (
-                          <Plus className="h-3.5 w-3.5" />
-                        )}
-                        {creatingUser ? 'Creating...' : 'Create User'}
-                      </Button>
-                    </div>
-                  </motion.form>
-                )}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-muted-foreground text-[10px] font-medium">Role</Label>
+                          <select
+                            value={newRole}
+                            onChange={(e) => setNewRole(e.target.value)}
+                            className="w-full h-9 text-sm bg-card border border-border text-foreground rounded-md px-2 focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
+                          >
+                            <option value="operator">Operator</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground text-[10px] font-medium">Counter Name</Label>
+                          <Input
+                            value={newCounterName}
+                            onChange={(e) => setNewCounterName(e.target.value)}
+                            placeholder="e.g., Counter 2"
+                            className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+                      <Separator className="bg-border" />
+                      <div>
+                        <Label className="text-destructive text-[10px] font-medium flex items-center gap-1">
+                          <Shield className="h-3 w-3" /> Your Admin Password (required)
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            type={showAdminPassword ? 'text' : 'password'}
+                            value={adminPassword}
+                            onChange={(e) => setAdminPassword(e.target.value)}
+                            placeholder="Enter your admin password"
+                            required
+                            className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm pr-10 focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20 transition-all duration-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowAdminPassword(!showAdminPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showAdminPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm h-9"
+                          onClick={() => {
+                            setShowNewUserForm(false)
+                            setNewUsername('')
+                            setNewPassword('')
+                            setNewRole('operator')
+                            setNewCounterName('')
+                            setAdminPassword('')
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1 text-sm h-9 shadow-[0_0_12px_-4px_#7C3AED40]"
+                          disabled={creatingUser}
+                        >
+                          {creatingUser ? (
+                            <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5" />
+                          )}
+                          {creatingUser ? 'Creating...' : 'Create User'}
+                        </Button>
+                      </div>
+                    </motion.form>
+                  )}
+                </div>
               </div>
-            </div>
+            </motion.div>
+
+            {/* Clear All Data - Inside Hidden Admin Panel */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <div className="relative overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF4444] to-[#F87171]" />
+                <div
+                  className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+                  style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
+                />
+                <div className="p-5 pl-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#EF4444]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#EF444440]">
+                      <Database className="h-5 w-5 text-[#EF4444]" />
+                    </div>
+                    <div>
+                      <h3 className="text-foreground font-bold text-base">Clear All Data</h3>
+                      <p className="text-muted-foreground text-xs mt-0.5">Reset all invoices and amounts to zero</p>
+                    </div>
+                  </div>
+
+                  {!showClearConfirm ? (
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 border-[#EF4444]/40 text-[#F87171] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/60 hover:text-foreground gap-2.5 transition-all duration-200 shadow-sm"
+                      onClick={() => setShowClearConfirm(true)}
+                    >
+                      <Trash2 className="h-4.5 w-4.5" /> Clear All Invoice Data
+                    </Button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-background rounded-xl p-4 border border-[#EF4444]/20 space-y-3 shadow-sm"
+                    >
+                      <div className="flex items-center gap-2 text-[#EF4444]">
+                        <AlertTriangle className="h-5 w-5" />
+                        <p className="text-sm font-bold">This will permanently delete ALL invoice data!</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This action cannot be undone. All invoices, items, and counters will be deleted. Please backup first if needed.
+                      </p>
+                      <div>
+                        <Label className="text-destructive text-[10px] font-medium flex items-center gap-1">
+                          <Shield className="h-3 w-3" /> Admin Password (required)
+                        </Label>
+                        <div className="relative mt-1">
+                          <Input
+                            type={showClearPassword ? 'text' : 'password'}
+                            value={clearAdminPassword}
+                            onChange={(e) => setClearAdminPassword(e.target.value)}
+                            placeholder="Enter your admin password to confirm"
+                            className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm pr-10 focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20 transition-all duration-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowClearPassword(!showClearPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showClearPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm h-9"
+                          onClick={() => {
+                            setShowClearConfirm(false)
+                            setClearAdminPassword('')
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="flex-1 gap-1 text-sm h-9"
+                          disabled={clearingData || !clearAdminPassword}
+                          onClick={handleClearAllData}
+                        >
+                          {clearingData ? (
+                            <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          {clearingData ? 'Clearing...' : 'Clear All Data'}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -68,3 +68,9 @@ model Session {
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @default("")
+}

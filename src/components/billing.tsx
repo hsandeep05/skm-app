@@ -63,7 +63,7 @@ function formatCurrency(amount: number): string {
 const inputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 h-9"
 const smallInputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 text-sm h-8"
 
-export function Billing() {
+export function Billing({ shopLogo }: { shopLogo?: string | null }) {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [mobileName, setMobileName] = useState('')
@@ -130,7 +130,8 @@ export function Billing() {
     grandTotal,
     amountPaid,
     balanceDue,
-  }), [customerName, customerPhone, mobileName, items, subtotal, discount, grandTotal, amountPaid, balanceDue])
+    shopLogo,
+  }), [customerName, customerPhone, mobileName, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo])
 
   const resetForm = useCallback(() => {
     setCustomerName('')
@@ -559,17 +560,6 @@ export function Billing() {
             <InvoicePreview data={invoiceData} />
           </div>
         </div>
-      </div>
-
-      {/* Mobile Preview Button (Floating) */}
-      <div className="lg:hidden fixed bottom-20 right-4 z-40">
-        <Button
-          onClick={() => setShowMobilePreview(true)}
-          className="h-12 w-12 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-lg shadow-[#7C3AED]/30"
-          size="icon"
-        >
-          <Eye className="h-5 w-5" />
-        </Button>
       </div>
 
       {/* Mobile Preview Dialog */}

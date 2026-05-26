@@ -159,8 +159,17 @@ export function Dashboard() {
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [shopLogo, setShopLogo] = useState<string | null>(null)
   const { isConnected, lastEvent, requestRefresh } = useRealtime()
   const { toast } = useToast()
+
+  // Load shop logo
+  useEffect(() => {
+    fetch('/api/logo')
+      .then(res => res.json())
+      .then(d => { if (d.logo) setShopLogo(d.logo) })
+      .catch(() => {})
+  }, [])
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -224,6 +233,7 @@ export function Dashboard() {
       grandTotal: bill.grandTotal,
       amountPaid: bill.amountPaid,
       balanceDue: bill.balanceDue,
+      shopLogo,
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)
