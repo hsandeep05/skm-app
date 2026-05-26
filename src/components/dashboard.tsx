@@ -15,12 +15,13 @@ import {
   AlertCircle,
   Trash2,
   Send,
+  CalendarDays,
+  FileText,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -50,33 +51,44 @@ interface MetricCardProps {
   title: string
   value: string
   icon: React.ReactNode
-  color: string
+  accentColor: string
+  gradientFrom: string
   delay?: number
 }
 
-function MetricCard({ title, value, icon, color, delay = 0 }: MetricCardProps) {
+function MetricCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }: MetricCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
     >
-      <Card className="bg-[#111827] border-[#1E293B] hover:border-[#7C3AED]/40 transition-all duration-200 group">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+      <div
+        className="relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group"
+        style={{ borderColor: accentColor, backgroundColor: '#111827' }}
+      >
+        {/* Gradient accent at top */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1"
+          style={{ background: `linear-gradient(90deg, ${accentColor}, ${gradientFrom})` }}
+        />
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground font-medium truncate">{title}</p>
-              <p className="text-xl font-bold text-white mt-1 truncate">{value}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: accentColor }}>
+                {title}
+              </p>
+              <p className="text-2xl font-bold text-white mt-1.5 truncate">{value}</p>
             </div>
             <div
-              className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-              style={{ backgroundColor: `${color}20` }}
+              className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+              style={{ backgroundColor: `${accentColor}25` }}
             >
-              <div style={{ color }}>{icon}</div>
+              <div style={{ color: accentColor }}>{icon}</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   )
 }
@@ -128,6 +140,13 @@ export function Dashboard() {
       fetchPendingBills()
     }
   }, [lastEvent, fetchDashboard, fetchPendingBills])
+
+  // Expose pending count for parent tab
+  useEffect(() => {
+    if (data) {
+      window.dispatchEvent(new CustomEvent('pending-count', { detail: data.pendingBills }))
+    }
+  }, [data])
 
   const handleViewInvoice = (bill: any) => {
     const invoiceData: InvoiceData = {
@@ -207,42 +226,48 @@ export function Dashboard() {
       title: "Today's Sales",
       value: formatCurrency(data.todaySales),
       icon: <DollarSign className="h-5 w-5" />,
-      color: '#10B981',
+      accentColor: '#10B981',
+      gradientFrom: '#34D399',
       delay: 0,
     },
     {
       title: 'Week Sales',
       value: formatCurrency(data.weekSales),
       icon: <TrendingUp className="h-5 w-5" />,
-      color: '#7C3AED',
+      accentColor: '#7C3AED',
+      gradientFrom: '#A78BFA',
       delay: 0.05,
     },
     {
       title: 'Month Sales',
       value: formatCurrency(data.monthSales),
-      icon: <TrendingUp className="h-5 w-5" />,
-      color: '#3B82F6',
+      icon: <CalendarDays className="h-5 w-5" />,
+      accentColor: '#3B82F6',
+      gradientFrom: '#60A5FA',
       delay: 0.1,
     },
     {
       title: 'Pending Amount',
       value: formatCurrency(data.pendingAmount),
       icon: <Clock className="h-5 w-5" />,
-      color: '#F59E0B',
+      accentColor: '#F59E0B',
+      gradientFrom: '#FBBF24',
       delay: 0.15,
     },
     {
       title: 'Pending Bills',
       value: String(data.pendingBills),
-      icon: <Receipt className="h-5 w-5" />,
-      color: '#EF4444',
+      icon: <AlertCircle className="h-5 w-5" />,
+      accentColor: '#EF4444',
+      gradientFrom: '#F87171',
       delay: 0.2,
     },
     {
       title: "Today's Bills",
       value: String(data.todayBills),
       icon: <CheckCircle className="h-5 w-5" />,
-      color: '#10B981',
+      accentColor: '#06B6D4',
+      gradientFrom: '#22D3EE',
       delay: 0.25,
     },
   ]
@@ -253,12 +278,12 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isConnected ? (
-            <Badge className="bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30 gap-1">
-              <Wifi className="h-3 w-3" /> Online
+            <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30 gap-1.5 px-3 py-1">
+              <Wifi className="h-3.5 w-3.5" /> Online
             </Badge>
           ) : (
-            <Badge className="bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30 gap-1">
-              <WifiOff className="h-3 w-3" /> Offline
+            <Badge className="bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30 gap-1.5 px-3 py-1">
+              <WifiOff className="h-3.5 w-3.5" /> Offline
             </Badge>
           )}
         </div>
@@ -270,53 +295,69 @@ export function Dashboard() {
             fetchDashboard()
             fetchPendingBills()
           }}
-          className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/10 gap-1"
+          className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/10 gap-1.5"
         >
           <RefreshCw className="h-3.5 w-3.5" /> Force Refresh
         </Button>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {metrics.map((metric, idx) => (
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        {metrics.map((metric) => (
           <MetricCard key={metric.title} {...metric} />
         ))}
       </div>
 
-      {/* Pending Bills Section */}
-      {pendingList.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-        >
-          <Card className="bg-[#111827] border-[#1E293B] border-l-4 border-l-[#F59E0B]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-white text-base flex items-center gap-2">
+      {/* Pending Bills Section - ALWAYS show */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.3 }}
+      >
+        <div className="overflow-hidden rounded-xl border border-[#F59E0B]/40 bg-[#111827]">
+          <div className="h-1 bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]" />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center">
                 <AlertCircle className="h-4 w-4 text-[#F59E0B]" />
-                Pending Bills ({pendingList.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="max-h-48">
-                <div className="px-4 pb-4 space-y-2">
+              </div>
+              <h3 className="text-white font-semibold text-sm">
+                Pending Bills
+              </h3>
+              <Badge className="bg-[#F59E0B]/20 text-[#F59E0B] border-0 text-xs px-2">
+                {pendingList.length}
+              </Badge>
+            </div>
+
+            {pendingList.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-4">
+                No pending bills. All caught up!
+              </p>
+            ) : (
+              <ScrollArea className="max-h-60">
+                <div className="space-y-2">
                   {pendingList.map((bill: any) => (
                     <div
                       key={bill.id}
-                      className="flex items-center justify-between bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B]"
+                      className="flex items-center justify-between bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B] hover:border-[#F59E0B]/30 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-white truncate">
                             {bill.customerName}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-[#94A3B8] truncate">
                             {bill.mobileName}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {bill.invoiceId} • {bill.date}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-[#94A3B8]">
+                            {bill.invoiceId}
+                          </span>
+                          <span className="text-xs text-[#F59E0B] font-semibold">
+                            {formatCurrency(bill.grandTotal)}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -324,6 +365,7 @@ export function Dashboard() {
                           size="icon"
                           className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/10"
                           onClick={() => handleViewInvoice(bill)}
+                          title="View"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -332,6 +374,7 @@ export function Dashboard() {
                           size="icon"
                           className="h-8 w-8 text-[#10B981] hover:bg-[#10B981]/10"
                           onClick={() => handleFinalize(bill.id)}
+                          title="Finalize"
                         >
                           <Send className="h-4 w-4" />
                         </Button>
@@ -340,6 +383,7 @@ export function Dashboard() {
                           size="icon"
                           className="h-8 w-8 text-red-400 hover:bg-red-400/10"
                           onClick={() => setDeleteConfirm(bill.id)}
+                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -348,10 +392,10 @@ export function Dashboard() {
                   ))}
                 </div>
               </ScrollArea>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+            )}
+          </div>
+        </div>
+      </motion.div>
 
       {/* Recent Completed Bills */}
       <motion.div
@@ -359,72 +403,77 @@ export function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.35 }}
       >
-        <Card className="bg-[#111827] border-[#1E293B]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base">Recent Completed Bills</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="max-h-96">
-              <div className="px-4 pb-4">
-                {data.recentBills.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-8">
-                    No completed bills yet. Create your first bill!
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {data.recentBills.map((bill: any, idx: number) => (
-                      <motion.div
-                        key={bill.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="flex items-center justify-between bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B] hover:border-[#7C3AED]/30 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white truncate">
-                              {bill.customerName}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate">
-                              {bill.mobileName}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-xs text-muted-foreground">
-                              {bill.invoiceId} • {bill.date}
-                            </p>
-                            {bill.paymentStatus === 'Paid' ? (
-                              <Badge className="bg-[#10B981]/20 text-[#10B981] border-0 text-[10px] h-4 px-1.5">
-                                Paid
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-[#F59E0B]/20 text-[#F59E0B] border-0 text-[10px] h-4 px-1.5">
-                                {bill.paymentStatus}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-white">
-                            {formatCurrency(bill.grandTotal)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/10"
-                            onClick={() => handleViewInvoice(bill)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+        <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-[#111827]">
+          <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-[#10B981]/20 flex items-center justify-center">
+                <FileText className="h-4 w-4 text-[#10B981]" />
               </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+              <h3 className="text-white font-semibold text-sm">
+                Recent Completed Bills
+              </h3>
+            </div>
+
+            {data.recentBills.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-4">
+                No completed bills yet. Create your first bill!
+              </p>
+            ) : (
+              <ScrollArea className="max-h-96">
+                <div className="space-y-2">
+                  {data.recentBills.map((bill: any, idx: number) => (
+                    <motion.div
+                      key={bill.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="flex items-center justify-between bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B] hover:border-[#10B981]/30 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white truncate">
+                            {bill.customerName}
+                          </span>
+                          <span className="text-xs text-[#94A3B8] truncate">
+                            {bill.mobileName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-[#94A3B8]">
+                            {bill.invoiceId} • {bill.date}
+                          </span>
+                          {bill.paymentStatus === 'Paid' ? (
+                            <Badge className="bg-[#10B981]/15 text-[#10B981] border-0 text-[10px] h-5 px-2 font-semibold">
+                              Paid
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-[#F59E0B]/15 text-[#F59E0B] border-0 text-[10px] h-5 px-2 font-semibold">
+                              {bill.paymentStatus}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-white">
+                          {formatCurrency(bill.grandTotal)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/10"
+                          onClick={() => handleViewInvoice(bill)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </div>
       </motion.div>
 
       {/* Invoice Preview Modal */}
@@ -445,11 +494,11 @@ export function Dashboard() {
           <DialogHeader>
             <DialogTitle className="text-white">Delete Invoice?</DialogTitle>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-[#94A3B8] text-sm">
             This action cannot be undone. The invoice will be permanently deleted.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#1E293B]">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#1E293B] text-white hover:bg-[#1E293B]">
               Cancel
             </Button>
             <Button

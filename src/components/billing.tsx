@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Save, Send, Eye, X } from 'lucide-react'
+import { Plus, Trash2, Save, Send, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { InvoicePreview, type InvoiceData, type InvoiceItem } from '@/components/invoice-preview'
+import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 import { useRealtime } from '@/hooks/use-realtime'
 import { saveOfflineInvoice, generateTempId, isOnline } from '@/lib/offline'
 import { useToast } from '@/hooks/use-toast'
@@ -58,6 +58,10 @@ interface LineItem {
 function formatCurrency(amount: number): string {
   return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
+
+// Shared input class with bright visible styling
+const inputClass = "bg-[#0F172A] border-[#334155] text-white placeholder:text-[#64748B] focus:border-[#7C3AED] h-9"
+const smallInputClass = "bg-[#0F172A] border-[#334155] text-white placeholder:text-[#64748B] focus:border-[#7C3AED] text-sm h-8"
 
 export function Billing() {
   const [customerName, setCustomerName] = useState('')
@@ -260,40 +264,46 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <Card className="bg-[#111827] border-[#1E293B]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-sm">Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Customer Name</Label>
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Walk-in Customer"
-                    className="bg-[#0B0F19] border-[#1E293B] text-white placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
-                  />
+            <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-[#111827]">
+              <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
+                    <span className="text-[#7C3AED] text-xs font-bold">C</span>
+                  </div>
+                  <h3 className="text-white text-sm font-semibold">Customer Information</h3>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Customer Phone (optional)</Label>
-                  <Input
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Phone number"
-                    className="bg-[#0B0F19] border-[#1E293B] text-white placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
-                  />
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-[#CBD5E1] text-xs font-medium">Customer Name</Label>
+                    <Input
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Walk-in Customer"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[#CBD5E1] text-xs font-medium">Customer Phone (optional)</Label>
+                    <Input
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="Phone number"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[#CBD5E1] text-xs font-medium">Mobile Name <span className="text-[#EF4444]">*</span></Label>
+                    <Input
+                      value={mobileName}
+                      onChange={(e) => setMobileName(e.target.value)}
+                      placeholder="e.g., Vivo Y21, Samsung S24"
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Mobile Name *</Label>
-                  <Input
-                    value={mobileName}
-                    onChange={(e) => setMobileName(e.target.value)}
-                    placeholder="e.g., Samsung Galaxy S24"
-                    className="bg-[#0B0F19] border-[#1E293B] text-white placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </motion.div>
 
           {/* Service Catalog */}
@@ -302,16 +312,20 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
           >
-            <Card className="bg-[#111827] border-[#1E293B]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-sm">Service Catalog</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="overflow-hidden rounded-xl border border-[#3B82F6]/30 bg-[#111827]">
+              <div className="h-1 bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-6 w-6 rounded-md bg-[#3B82F6]/20 flex items-center justify-center">
+                    <span className="text-[#3B82F6] text-xs font-bold">S</span>
+                  </div>
+                  <h3 className="text-white text-sm font-semibold">Service Catalog</h3>
+                </div>
                 <Select onValueChange={addServiceItem}>
-                  <SelectTrigger className="w-full bg-[#0B0F19] border-[#1E293B] text-white focus:border-[#7C3AED]">
+                  <SelectTrigger className="w-full bg-[#0F172A] border-[#334155] text-white focus:border-[#7C3AED]">
                     <SelectValue placeholder="Select a service to add..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#111827] border-[#1E293B]">
+                  <SelectContent className="bg-[#111827] border-[#334155]">
                     {SERVICE_CATALOG.map((service) => (
                       <SelectItem key={service} value={service} className="text-white focus:bg-[#7C3AED]/20 focus:text-white">
                         {service}
@@ -323,12 +337,12 @@ export function Billing() {
                   variant="outline"
                   size="sm"
                   onClick={addCustomItem}
-                  className="mt-2 w-full border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/10 gap-1"
+                  className="mt-2 w-full border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-white gap-1"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add Custom Item
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </motion.div>
 
           {/* Line Items */}
@@ -337,75 +351,87 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.1 }}
           >
-            <Card className="bg-[#111827] border-[#1E293B]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-sm">
-                  Line Items ({items.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <AnimatePresence>
-                  {items.map((item, idx) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B] space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">#{idx + 1} {item.isCustom ? '(Custom)' : ''}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-red-400 hover:bg-red-400/10 hover:text-red-400"
-                          onClick={() => removeItem(item.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-[10px]">Description</Label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          placeholder="Service description"
-                          readOnly={!item.isCustom}
-                          className="bg-[#111827] border-[#1E293B] text-white text-xs h-8 placeholder:text-muted-foreground/50 focus:border-[#7C3AED] disabled:opacity-70"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-muted-foreground text-[10px]">Cost Price (Hidden)</Label>
-                          <Input
-                            type="number"
-                            value={item.costPrice || ''}
-                            onChange={(e) => updateItem(item.id, 'costPrice', parseFloat(e.target.value) || 0)}
-                            placeholder="0.00"
-                            className="bg-[#111827] border-[#1E293B] text-white text-xs h-8 placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
-                          />
+            <div className="overflow-hidden rounded-xl border border-[#F59E0B]/30 bg-[#111827]">
+              <div className="h-1 bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]" />
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-6 w-6 rounded-md bg-[#F59E0B]/20 flex items-center justify-center">
+                    <span className="text-[#F59E0B] text-xs font-bold">{items.length}</span>
+                  </div>
+                  <h3 className="text-white text-sm font-semibold">Line Items</h3>
+                </div>
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {items.map((item, idx) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-[#0F172A] rounded-lg p-3 border border-[#334155] space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-[#7C3AED]">#{idx + 1}</span>
+                            {item.isCustom && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA]">Custom</span>
+                            )}
+                            {item.description && (
+                              <span className="text-xs text-[#CBD5E1] truncate max-w-[140px]">{item.description}</span>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-[#EF4444] hover:bg-[#EF4444]/10 hover:text-[#EF4444]"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                         <div>
-                          <Label className="text-muted-foreground text-[10px]">Selling Price *</Label>
+                          <Label className="text-[#94A3B8] text-[10px] font-medium">Description</Label>
                           <Input
-                            type="number"
-                            value={item.sellingPrice || ''}
-                            onChange={(e) => updateItem(item.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
-                            placeholder="0.00"
-                            className="bg-[#111827] border-[#1E293B] text-white text-xs h-8 placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
+                            value={item.description}
+                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                            placeholder="Service description"
+                            readOnly={!item.isCustom}
+                            className={`${smallInputClass} disabled:opacity-80 disabled:text-[#CBD5E1]`}
                           />
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                {items.length === 0 && (
-                  <p className="text-muted-foreground text-xs text-center py-4">
-                    No items added. Select a service or add a custom item.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[#94A3B8] text-[10px] font-medium">Cost Price</Label>
+                            <Input
+                              type="number"
+                              value={item.costPrice || ''}
+                              onChange={(e) => updateItem(item.id, 'costPrice', parseFloat(e.target.value) || 0)}
+                              placeholder="₹0"
+                              className={smallInputClass}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[#94A3B8] text-[10px] font-medium">Selling Price <span className="text-[#EF4444]">*</span></Label>
+                            <Input
+                              type="number"
+                              value={item.sellingPrice || ''}
+                              onChange={(e) => updateItem(item.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
+                              placeholder="₹0"
+                              className={smallInputClass}
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  {items.length === 0 && (
+                    <p className="text-[#64748B] text-xs text-center py-4">
+                      No items added. Select a service or add a custom item.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Financial Summary */}
@@ -414,65 +440,72 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.15 }}
           >
-            <Card className="bg-[#111827] border-[#1E293B]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-sm">Financial Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="text-white font-medium">{formatCurrency(subtotal)}</span>
+            <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-[#111827]">
+              <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-6 w-6 rounded-md bg-[#10B981]/20 flex items-center justify-center">
+                    <span className="text-[#10B981] text-xs font-bold">₹</span>
+                  </div>
+                  <h3 className="text-white text-sm font-semibold">Financial Summary</h3>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Discount</Label>
-                  <Input
-                    type="number"
-                    value={discount || ''}
-                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="bg-[#0B0F19] border-[#1E293B] text-white h-8 placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
-                  />
-                </div>
-                <Separator className="bg-[#1E293B]" />
-                <div className="flex justify-between text-sm">
-                  <span className="text-white font-semibold">Grand Total</span>
-                  <span className="text-white font-bold text-lg">{formatCurrency(grandTotal)}</span>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Amount Paid</Label>
-                  <Input
-                    type="number"
-                    value={amountPaid || ''}
-                    onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="bg-[#0B0F19] border-[#1E293B] text-white h-8 placeholder:text-muted-foreground/50 focus:border-[#7C3AED]"
-                  />
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Balance Due</span>
-                  <span
-                    className="font-bold"
-                    style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#94A3B8]">Subtotal</span>
+                    <span className="text-white font-semibold">{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div>
+                    <Label className="text-[#CBD5E1] text-xs font-medium">Discount</Label>
+                    <Input
+                      type="number"
+                      value={discount || ''}
+                      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                      placeholder="₹0"
+                      className={inputClass}
+                    />
+                  </div>
+                  <Separator className="bg-[#334155]" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-white font-bold">Grand Total</span>
+                    <span className="text-2xl font-bold text-[#10B981]">{formatCurrency(grandTotal)}</span>
+                  </div>
+                  <div>
+                    <Label className="text-[#CBD5E1] text-xs font-medium">Amount Paid</Label>
+                    <Input
+                      type="number"
+                      value={amountPaid || ''}
+                      onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+                      placeholder="₹0"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded-lg"
+                    style={{ backgroundColor: balanceDue <= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }}
                   >
-                    {formatCurrency(balanceDue)}
-                  </span>
+                    <span className="text-sm font-medium" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
+                      Balance Due
+                    </span>
+                    <span className="text-lg font-bold" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
+                      {formatCurrency(balanceDue)}
+                    </span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </motion.div>
 
           {/* Action Buttons */}
           <div className="flex gap-3 pb-4">
             <Button
               variant="outline"
-              className="flex-1 border-[#1E293B] text-muted-foreground hover:bg-[#1E293B]/50 hover:text-white gap-2"
+              className="flex-1 border-[#334155] text-[#CBD5E1] hover:bg-[#1E293B] hover:text-white gap-2 h-10"
               onClick={() => saveInvoice('pending')}
               disabled={saving}
             >
               <Save className="h-4 w-4" /> Save as Pending
             </Button>
             <Button
-              className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 shadow-lg shadow-[#7C3AED]/20"
+              className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 shadow-lg shadow-[#7C3AED]/25 h-10"
               onClick={() => saveInvoice('completed')}
               disabled={saving}
             >

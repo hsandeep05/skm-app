@@ -126,6 +126,13 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Dark theme input focus glow */
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
+}
+
 /* Invoice print styles */
 @media print {
   body * {

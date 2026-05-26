@@ -32,32 +32,42 @@ interface SummaryCardProps {
   title: string
   value: string
   icon: React.ReactNode
-  color: string
+  accentColor: string
+  gradientFrom: string
 }
 
-function SummaryCard({ title, value, icon, color }: SummaryCardProps) {
+function SummaryCard({ title, value, icon, accentColor, gradientFrom }: SummaryCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="bg-[#111827] border-[#1E293B] hover:border-[#7C3AED]/40 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">{title}</p>
-              <p className="text-lg font-bold text-white mt-1">{value}</p>
+      <div
+        className="relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group"
+        style={{ borderColor: accentColor, backgroundColor: '#111827' }}
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-1"
+          style={{ background: `linear-gradient(90deg, ${accentColor}, ${gradientFrom})` }}
+        />
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: accentColor }}>
+                {title}
+              </p>
+              <p className="text-2xl font-bold text-white mt-1.5 truncate">{value}</p>
             </div>
             <div
-              className="h-10 w-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: `${color}20` }}
+              className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+              style={{ backgroundColor: `${accentColor}25` }}
             >
-              <div style={{ color }}>{icon}</div>
+              <div style={{ color: accentColor }}>{icon}</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   )
 }
@@ -66,10 +76,10 @@ function SummaryCard({ title, value, icon, color }: SummaryCardProps) {
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#111827] border border-[#1E293B] rounded-lg p-3 shadow-lg">
-        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <div className="bg-[#111827] border border-[#334155] rounded-lg p-3 shadow-lg">
+        <p className="text-xs text-[#94A3B8] mb-1">{label}</p>
         {payload.map((entry: any, idx: number) => (
-          <p key={idx} className="text-xs font-medium" style={{ color: entry.color }}>
+          <p key={idx} className="text-xs font-semibold" style={{ color: entry.color }}>
             {entry.name}: {formatCurrency(entry.value)}
           </p>
         ))}
@@ -109,25 +119,29 @@ export function Analytics() {
           title: 'Total Gross Sales',
           value: formatCurrency(data.totalGrossSales),
           icon: <DollarSign className="h-5 w-5" />,
-          color: '#10B981',
+          accentColor: '#10B981',
+          gradientFrom: '#34D399',
         },
         {
           title: 'Total Cash Collected',
           value: formatCurrency(data.totalCashCollected),
           icon: <TrendingUp className="h-5 w-5" />,
-          color: '#7C3AED',
+          accentColor: '#7C3AED',
+          gradientFrom: '#A78BFA',
         },
         {
           title: 'Total Outstanding',
           value: formatCurrency(data.totalOutstanding),
           icon: <Clock className="h-5 w-5" />,
-          color: '#F59E0B',
+          accentColor: '#F59E0B',
+          gradientFrom: '#FBBF24',
         },
         {
           title: 'Total Net Profit',
           value: formatCurrency(data.totalNetProfit),
           icon: <BarChart3 className="h-5 w-5" />,
-          color: '#3B82F6',
+          accentColor: '#06B6D4',
+          gradientFrom: '#22D3EE',
         },
       ]
     : []
@@ -150,12 +164,12 @@ export function Analytics() {
       {/* Date Picker */}
       <div className="flex items-end gap-3">
         <div className="flex-1 max-w-xs">
-          <Label className="text-muted-foreground text-xs">Select Date</Label>
+          <Label className="text-[#CBD5E1] text-xs font-medium">Select Date</Label>
           <Input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-[#111827] border-[#1E293B] text-white"
+            className="bg-[#0F172A] border-[#334155] text-white focus:border-[#7C3AED] h-9"
           />
         </div>
       </div>
@@ -168,11 +182,15 @@ export function Analytics() {
       </div>
 
       {/* Sales & Profit Trend Chart */}
-      <Card className="bg-[#111827] border-[#1E293B]">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-white text-base">Last 7 Days — Sales & Profit Trend</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-[#111827]">
+        <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
+              <BarChart3 className="h-3.5 w-3.5 text-[#7C3AED]" />
+            </div>
+            <h3 className="text-white font-semibold text-sm">Last 7 Days — Sales & Profit Trend</h3>
+          </div>
           {chartData.length > 0 ? (
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -223,12 +241,12 @@ export function Analytics() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+            <div className="flex items-center justify-center h-48 text-[#64748B] text-sm">
               No trend data available
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

@@ -2,8 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Download, Upload, Settings, LogOut, Mail, Info, CheckCircle } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Download, Upload, LogOut, Mail, Info, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
@@ -28,7 +27,6 @@ export function SettingsPage() {
           return
         }
 
-        // Build CSV
         const headers = Object.keys(invoices[0])
         const csvRows = [
           headers.join(','),
@@ -112,7 +110,6 @@ export function SettingsPage() {
         return obj
       })
 
-      // Parse items from Items string
       const invoices = rows
         .filter((row) => row.InvoiceId || row.invoiceId)
         .map((row) => {
@@ -191,28 +188,30 @@ export function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="bg-[#111827] border-[#1E293B]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base flex items-center gap-2">
-              <Mail className="h-4 w-4 text-[#7C3AED]" /> Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-[#111827]">
+          <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
+                <Mail className="h-3.5 w-3.5 text-[#7C3AED]" />
+              </div>
+              <h3 className="text-white text-sm font-semibold">Profile</h3>
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white text-sm font-medium">hsandeep799@gmail.com</p>
-                <p className="text-xs text-muted-foreground">Primary Operator</p>
+                <p className="text-xs text-[#94A3B8]">Primary Operator</p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1"
+                className="border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/10 gap-1"
               >
                 <LogOut className="h-3.5 w-3.5" /> Sign Out
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </motion.div>
 
       {/* Backup & Sync Section */}
@@ -221,17 +220,19 @@ export function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <Card className="bg-[#111827] border-[#1E293B]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base flex items-center gap-2">
-              <Download className="h-4 w-4 text-[#7C3AED]" /> Backup & Restore
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-[#111827]">
+          <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-6 w-6 rounded-md bg-[#10B981]/20 flex items-center justify-center">
+                <Download className="h-3.5 w-3.5 text-[#10B981]" />
+              </div>
+              <h3 className="text-white text-sm font-semibold">Backup & Restore</h3>
+            </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="outline"
-                className="flex-1 border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/10 gap-2"
+                className="flex-1 border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-white gap-2"
                 onClick={handleExportCSV}
                 disabled={exporting}
               >
@@ -240,7 +241,7 @@ export function SettingsPage() {
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10 gap-2"
+                className="flex-1 border-[#10B981]/50 text-[#34D399] hover:bg-[#10B981]/10 hover:text-white gap-2"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={restoring}
               >
@@ -255,12 +256,12 @@ export function SettingsPage() {
                 onChange={handleRestoreCSV}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#64748B] mt-3">
               Export all completed bills as a CSV file for backup or spreadsheet import. 
               Restore previously exported data from a CSV file.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </motion.div>
 
       {/* App Info */}
@@ -269,33 +270,35 @@ export function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
       >
-        <Card className="bg-[#111827] border-[#1E293B]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-base flex items-center gap-2">
-              <Info className="h-4 w-4 text-[#7C3AED]" /> App Info
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="overflow-hidden rounded-xl border border-[#3B82F6]/30 bg-[#111827]">
+          <div className="h-1 bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-6 w-6 rounded-md bg-[#3B82F6]/20 flex items-center justify-center">
+                <Info className="h-3.5 w-3.5 text-[#3B82F6]" />
+              </div>
+              <h3 className="text-white text-sm font-semibold">App Info</h3>
+            </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-muted-foreground">App Name</span>
-              <span className="text-white">Sri Krishna Mobiles Bill Generator</span>
-              <span className="text-muted-foreground">Version</span>
-              <span className="text-white">1.0.0</span>
-              <span className="text-muted-foreground">Framework</span>
-              <span className="text-white">Next.js 16</span>
-              <span className="text-muted-foreground">Database</span>
-              <span className="text-white">SQLite (Prisma)</span>
-              <span className="text-muted-foreground">Sync</span>
-              <span className="text-white flex items-center gap-1">
+              <span className="text-[#94A3B8]">App Name</span>
+              <span className="text-white font-medium">Sri Krishna Mobiles Bill Generator</span>
+              <span className="text-[#94A3B8]">Version</span>
+              <span className="text-white font-medium">1.0.0</span>
+              <span className="text-[#94A3B8]">Framework</span>
+              <span className="text-white font-medium">Next.js 16</span>
+              <span className="text-[#94A3B8]">Database</span>
+              <span className="text-white font-medium">SQLite (Prisma)</span>
+              <span className="text-[#94A3B8]">Sync</span>
+              <span className="text-white font-medium flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 text-[#10B981]" /> Real-time (WebSocket)
               </span>
             </div>
-            <Separator className="bg-[#1E293B]" />
-            <p className="text-xs text-muted-foreground text-center">
+            <Separator className="bg-[#334155] my-3" />
+            <p className="text-xs text-[#64748B] text-center">
               Built with ❤️ for Sri Krishna Mobiles, Narayanpet
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </motion.div>
     </div>
   )
