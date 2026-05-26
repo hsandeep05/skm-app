@@ -207,51 +207,90 @@ export function PendingBills() {
 
   return (
     <div className="space-y-4">
-      {/* Header Stats */}
+      {/* Header with Gradient Summary */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+        className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#F59E0B]/10 via-[#F59E0B]/5 to-transparent border border-[#F59E0B]/20 p-4"
       >
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-            <Clock className="h-5 w-5 text-[#F59E0B]" />
+        {/* Subtle dot pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="relative h-11 w-11 rounded-xl bg-gradient-to-br from-[#F59E0B]/30 to-[#F59E0B]/10 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+              <Clock className="h-5 w-5 text-[#F59E0B]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-foreground font-bold text-lg">Pending Bills</h2>
+                {bills.length > 0 && (
+                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[#F59E0B] text-white text-[10px] font-bold animate-pulse">
+                    {bills.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Total due: <span className="font-semibold text-[#F59E0B]">{formatCurrency(totalPendingAmount)}</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-foreground font-bold text-lg">Pending Bills</h2>
-            <p className="text-muted-foreground text-xs">
-              {bills.length} bill{bills.length !== 1 ? 's' : ''} pending • Total due: {formatCurrency(totalPendingAmount)}
-            </p>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchPendingBills}
+            className="border-[#7C3AED]/50 text-[#7C3AED] hover:bg-[#7C3AED]/10 hover:border-[#7C3AED] gap-1.5 backdrop-blur-sm"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchPendingBills}
-          className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/10 gap-1.5"
-        >
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
-        </Button>
       </motion.div>
+
+      {/* Summary Stats Strip */}
+      {bills.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex items-center gap-2 flex-wrap"
+        >
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs">
+            <div className="h-1.5 w-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+            <span className="text-muted-foreground">Bills</span>
+            <span className="font-semibold text-foreground">{bills.length}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs">
+            <div className="h-1.5 w-1.5 rounded-full bg-[#7C3AED]" />
+            <span className="text-muted-foreground">Amount</span>
+            <span className="font-semibold text-foreground">{formatCurrency(totalPendingAmount)}</span>
+          </div>
+          {bills.filter((b) => b.paymentStatus === 'Partial').length > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#3B82F6]" />
+              <span className="text-muted-foreground">Partial</span>
+              <span className="font-semibold text-foreground">{bills.filter((b) => b.paymentStatus === 'Partial').length}</span>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Search & Sort */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="flex flex-col sm:flex-row gap-3"
+        className="flex flex-col sm:flex-row gap-3 p-3 rounded-xl bg-card/50 border border-border/50"
       >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, mobile, or invoice ID..."
-            className="bg-card border-border text-foreground placeholder:text-muted-foreground pl-9 h-9"
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground pl-9 h-9 focus-visible:ring-[#7C3AED]/30 focus-visible:border-[#7C3AED]/50 focus-visible:shadow-[0_0_12px_rgba(124,58,237,0.15)]"
           />
         </div>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'date' | 'amount' | 'name')}>
-          <SelectTrigger className="w-full sm:w-40 bg-card border-border text-foreground h-9">
+          <SelectTrigger className="w-full sm:w-44 bg-background border-border text-foreground h-9 focus:ring-[#7C3AED]/30">
             <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
             <SelectValue />
           </SelectTrigger>
@@ -266,21 +305,23 @@ export function PendingBills() {
       {/* Bills List */}
       {filteredBills.length === 0 ? (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center py-16 text-center"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-20 text-center"
         >
-          <div className="h-16 w-16 rounded-2xl bg-[#10B981]/10 flex items-center justify-center mb-4">
-            <CheckCircle className="h-8 w-8 text-[#10B981]" />
+          <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-[#10B981]/20 to-[#10B981]/5 flex items-center justify-center mb-5 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+            <CheckCircle className="h-10 w-10 text-[#10B981]" />
           </div>
-          <h3 className="text-foreground font-semibold text-lg">All Caught Up!</h3>
-          <p className="text-muted-foreground text-sm mt-1">
-            {searchQuery ? 'No pending bills match your search' : 'No pending bills at the moment'}
+          <h3 className="text-foreground font-bold text-xl">All Caught Up!</h3>
+          <p className="text-muted-foreground text-sm mt-2 max-w-xs">
+            {searchQuery
+              ? 'No pending bills match your search. Try different keywords.'
+              : 'No pending bills at the moment. Great job staying on top of things!'}
           </p>
         </motion.div>
       ) : (
-        <ScrollArea className="h-[calc(100vh-16rem)]">
-          <div className="space-y-2">
+        <ScrollArea className="h-[calc(100vh-18rem)]">
+          <div className="space-y-2.5">
             <AnimatePresence>
               {filteredBills.map((bill, idx) => (
                 <motion.div
@@ -289,29 +330,38 @@ export function PendingBills() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ delay: idx * 0.02 }}
-                  className="bg-card border border-[#F59E0B]/20 hover:border-[#F59E0B]/40 rounded-xl p-4 transition-all duration-200"
+                  className="group relative bg-card border border-[#F59E0B]/15 hover:border-[#F59E0B]/40 rounded-xl p-4 pl-5 transition-all duration-300 hover:shadow-lg hover:shadow-[#F59E0B]/5"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  {/* Left accent bar */}
+                  <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-gradient-to-b from-[#F59E0B] to-[#F59E0B]/30" />
+
+                  {/* Subtle radial glow in top-right */}
+                  <div className="absolute top-0 right-0 w-24 h-24 rounded-tr-xl bg-gradient-to-bl from-[#F59E0B]/5 to-transparent pointer-events-none" />
+
+                  {/* Dot pattern overlay */}
+                  <div className="absolute inset-0 rounded-xl opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, currentColor 0.5px, transparent 0.5px)', backgroundSize: '12px 12px' }} />
+
+                  <div className="relative flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-foreground font-semibold text-sm truncate">
+                        <span className="text-foreground font-bold text-sm truncate">
                           {bill.customerName}
                         </span>
-                        <Badge className="bg-[#F59E0B]/15 text-[#F59E0B] border-0 text-[10px] h-5 px-2 font-semibold">
+                        <Badge className="bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 text-[10px] h-5 px-2.5 font-semibold rounded-full">
                           Pending
                         </Badge>
                         {bill.paymentStatus === 'Partial' && (
-                          <Badge className="bg-[#3B82F6]/15 text-[#3B82F6] border-0 text-[10px] h-5 px-2 font-semibold">
+                          <Badge className="bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 text-[10px] h-5 px-2.5 font-semibold rounded-full">
                             Partial
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
                           <AlertCircle className="h-3 w-3" />
                           {bill.invoiceId}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground font-medium">
                           {bill.mobileName}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -319,14 +369,14 @@ export function PendingBills() {
                         </span>
                       </div>
                       {bill.items && bill.items.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                           {bill.items.slice(0, 3).map((item, i) => (
-                            <span key={i} className="text-[10px] bg-background text-muted-foreground px-1.5 py-0.5 rounded border border-border">
+                            <span key={i} className="text-[10px] bg-background/80 text-muted-foreground px-2 py-0.5 rounded-full border border-border/50 font-medium">
                               {item.description}
                             </span>
                           ))}
                           {bill.items.length > 3 && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] text-muted-foreground font-medium px-1.5">
                               +{bill.items.length - 3} more
                             </span>
                           )}
@@ -346,7 +396,7 @@ export function PendingBills() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/10"
+                          className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/15 hover:text-[#7C3AED] rounded-lg transition-colors"
                           onClick={() => handleViewInvoice(bill)}
                           title="View Invoice"
                         >
@@ -355,7 +405,7 @@ export function PendingBills() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-[#10B981] hover:bg-[#10B981]/10"
+                          className="h-8 w-8 text-[#10B981] hover:bg-[#10B981]/15 hover:text-[#10B981] rounded-lg transition-colors"
                           onClick={() => handleFinalize(bill.id)}
                           disabled={finalizingId === bill.id}
                           title="Finalize Bill"
@@ -369,7 +419,7 @@ export function PendingBills() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          className="h-8 w-8 text-destructive/70 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
                           onClick={() => setDeleteConfirm(bill.id)}
                           title="Delete Bill"
                         >
@@ -387,9 +437,9 @@ export function PendingBills() {
 
       {/* Invoice Preview Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border/80 max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Invoice Preview</DialogTitle>
+            <DialogTitle className="text-foreground font-bold">Invoice Preview</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
             <InvoicePreview data={selectedInvoice} showDownload />
@@ -399,9 +449,9 @@ export function PendingBills() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-card border-border max-w-sm">
+        <DialogContent className="bg-card border-border/80 max-w-sm shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Delete Invoice?</DialogTitle>
+            <DialogTitle className="text-foreground font-bold">Delete Invoice?</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
             This action cannot be undone. The invoice will be permanently deleted.
@@ -413,6 +463,7 @@ export function PendingBills() {
             <Button
               variant="destructive"
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              className="hover:shadow-md hover:shadow-destructive/20 transition-shadow"
             >
               Delete
             </Button>

@@ -34,35 +34,96 @@ interface SummaryCardProps {
   icon: React.ReactNode
   accentColor: string
   gradientFrom: string
+  delay?: number
 }
 
-function SummaryCard({ title, value, icon, accentColor, gradientFrom }: SummaryCardProps) {
+function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }: SummaryCardProps) {
+  const [hovered, setHovered] = useState(false)
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       <div
-        className="relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group bg-card"
-        style={{ borderColor: accentColor }}
+        className="group relative overflow-hidden rounded-2xl border bg-card
+                    transition-all duration-300 ease-out
+                    hover:-translate-y-1
+                    cursor-default"
+        style={{
+          borderColor: hovered ? 'transparent' : undefined,
+          boxShadow: hovered
+            ? `0 8px 30px -8px ${accentColor}35, 0 0 20px -6px ${accentColor}20`
+            : undefined,
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
+        {/* Subtle accent gradient overlay on the card */}
         <div
-          className="absolute top-0 left-0 right-0 h-1"
-          style={{ background: `linear-gradient(90deg, ${accentColor}, ${gradientFrom})` }}
+          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+          style={{
+            opacity: hovered ? 1 : 0,
+            background: `linear-gradient(135deg, ${accentColor}08 0%, transparent 60%)`,
+          }}
         />
-        <div className="p-4">
-          <div className="flex items-start justify-between gap-2">
+
+        {/* Subtle dot pattern overlay for visual texture */}
+        <div
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle, ${accentColor} 1px, transparent 1px)`,
+            backgroundSize: '16px 16px',
+          }}
+        />
+
+        {/* Radial glow from top-right corner */}
+        <div
+          className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+          style={{
+            background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
+          }}
+        />
+
+        {/* Left-side color bar */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+          style={{
+            background: `linear-gradient(180deg, ${accentColor}, ${gradientFrom})`,
+          }}
+        />
+
+        <div className="relative p-5 pl-6">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: accentColor }}>
+              <p
+                className="text-[11px] font-bold uppercase tracking-[0.1em] truncate"
+                style={{ color: accentColor }}
+              >
                 {title}
               </p>
-              <p className="text-2xl font-bold text-foreground mt-1.5 truncate">{value}</p>
+              <p className="text-3xl font-extrabold text-foreground mt-2 tracking-tight truncate leading-none">
+                {value}
+              </p>
             </div>
+            {/* Circular icon with glow */}
             <div
-              className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-              style={{ backgroundColor: `${accentColor}25` }}
+              className="relative h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0
+                          transition-all duration-300"
+              style={{
+                background: `linear-gradient(135deg, ${accentColor}${hovered ? '25' : '18'}, ${accentColor}${hovered ? '12' : '08'})`,
+                transform: hovered ? 'scale(1.1)' : undefined,
+                boxShadow: hovered
+                  ? `0 0 20px -4px ${accentColor}40, 0 0 8px -2px ${accentColor}25`
+                  : 'none',
+              }}
             >
+              {/* Inner ring */}
+              <div
+                className="absolute inset-[2px] rounded-full border transition-colors duration-300"
+                style={{ borderColor: `${accentColor}${hovered ? '35' : '20'}` }}
+              />
               <div style={{ color: accentColor }}>{icon}</div>
             </div>
           </div>
@@ -121,6 +182,7 @@ export function Analytics() {
           icon: <DollarSign className="h-5 w-5" />,
           accentColor: '#10B981',
           gradientFrom: '#34D399',
+          delay: 0,
         },
         {
           title: 'Total Cash Collected',
@@ -128,6 +190,7 @@ export function Analytics() {
           icon: <TrendingUp className="h-5 w-5" />,
           accentColor: '#7C3AED',
           gradientFrom: '#A78BFA',
+          delay: 0.06,
         },
         {
           title: 'Total Outstanding',
@@ -135,6 +198,7 @@ export function Analytics() {
           icon: <Clock className="h-5 w-5" />,
           accentColor: '#F59E0B',
           gradientFrom: '#FBBF24',
+          delay: 0.12,
         },
         {
           title: 'Total Net Profit',
@@ -142,6 +206,7 @@ export function Analytics() {
           icon: <BarChart3 className="h-5 w-5" />,
           accentColor: '#06B6D4',
           gradientFrom: '#22D3EE',
+          delay: 0.18,
         },
       ]
     : []
@@ -175,22 +240,39 @@ export function Analytics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {summaryCards.map((card, idx) => (
           <SummaryCard key={idx} {...card} />
         ))}
       </div>
 
       {/* Sales & Profit Trend Chart */}
-      <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-card">
-        <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
-              <BarChart3 className="h-3.5 w-3.5 text-[#7C3AED]" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.24 }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA] rounded-l-2xl" />
+
+          {/* Subtle background glow */}
+          <div
+            className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+            style={{ background: '#7C3AED' }}
+          />
+
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-[#7C3AED]" />
+              </div>
+              <div>
+                <h3 className="text-foreground font-bold text-base">Last 7 Days — Sales & Profit Trend</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Revenue and profit over time</p>
+              </div>
             </div>
-            <h3 className="text-foreground font-semibold text-sm">Last 7 Days — Sales & Profit Trend</h3>
-          </div>
           {chartData.length > 0 ? (
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -247,6 +329,7 @@ export function Analytics() {
           )}
         </div>
       </div>
+      </motion.div>
     </div>
   )
 }

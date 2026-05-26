@@ -91,9 +91,9 @@
 .light {
   --background: #F8FAFC;
   --foreground: #0F172A;
-  --card: #FFFFFF;
+  --card: #FFFCF8;
   --card-foreground: #0F172A;
-  --popover: #FFFFFF;
+  --popover: #FFFCF8;
   --popover-foreground: #0F172A;
   --primary: #7C3AED;
   --primary-foreground: #FFFFFF;
@@ -104,8 +104,8 @@
   --accent: #F1F5F9;
   --accent-foreground: #0F172A;
   --destructive: #EF4444;
-  --border: #E2E8F0;
-  --input: #E2E8F0;
+  --border: #E5E1DC;
+  --input: #E5E1DC;
   --ring: #7C3AED;
   --chart-1: #7C3AED;
   --chart-2: #10B981;
@@ -118,7 +118,7 @@
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F1F5F9;
   --sidebar-accent-foreground: #0F172A;
-  --sidebar-border: #E2E8F0;
+  --sidebar-border: #E5E1DC;
   --sidebar-ring: #7C3AED;
 }
 
@@ -130,39 +130,72 @@
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans), system-ui, sans-serif;
   }
+  /* Smooth transitions for interactive elements */
+  input,
+  select,
+  textarea,
+  button,
+  a,
+  [role="button"] {
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.15s ease, opacity 0.15s ease;
+  }
 }
 
 /* Custom scrollbar - dark mode */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #0B0F19;
+  background: rgba(11, 15, 25, 0.5);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
+  background-color: #334155;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background-color: #475569;
 }
 
 /* Light mode scrollbar */
 .light ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: rgba(241, 245, 249, 0.5);
 }
 
 .light ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 3px;
+  background-color: #CBD5E1;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
 }
 
 .light ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background-color: #94A3B8;
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.light * {
+  scrollbar-color: #CBD5E1 transparent;
 }
 
 /* Custom input styles */
@@ -176,12 +209,215 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Input focus glow */
+/* Premium input focus glow with inner radiance */
 input:focus,
-select:focus,
 textarea:focus {
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.4),
+    0 0 0 3px rgba(124, 58, 237, 0.15),
+    inset 0 1px 2px rgba(124, 58, 237, 0.08) !important;
+  border-color: rgba(124, 58, 237, 0.5) !important;
 }
+
+select:focus {
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.4),
+    0 0 0 3px rgba(124, 58, 237, 0.15) !important;
+  border-color: rgba(124, 58, 237, 0.5) !important;
+}
+
+/* Light mode focus adjustments — slightly stronger glow for contrast */
+.light input:focus,
+.light textarea:focus {
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.5),
+    0 0 0 4px rgba(124, 58, 237, 0.12),
+    inset 0 1px 2px rgba(124, 58, 237, 0.06) !important;
+  border-color: rgba(124, 58, 237, 0.6) !important;
+}
+
+.light select:focus {
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.5),
+    0 0 0 4px rgba(124, 58, 237, 0.12) !important;
+  border-color: rgba(124, 58, 237, 0.6) !important;
+}
+
+/* Enhanced focus ring for all focusable elements */
+:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.5);
+  outline-offset: 2px;
+}
+
+.light :focus-visible {
+  outline: 2px solid rgba(109, 40, 217, 0.5);
+  outline-offset: 2px;
+}
+
+/* Remove default focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Gradient border utility */
+.gradient-border-bottom {
+  position: relative;
+}
+.gradient-border-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(124, 58, 237, 0.4), transparent);
+}
+
+.gradient-border-top {
+  position: relative;
+}
+.gradient-border-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(124, 58, 237, 0.3), transparent);
+}
+
+/* Login background pattern */
+.login-bg-pattern {
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(167, 139, 250, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, rgba(124, 58, 237, 0.04) 0%, transparent 50%);
+}
+
+/* ─── Utility: Glass Card ─────────────────────────── */
+.glass-card {
+  background: rgba(17, 24, 39, 0.65);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid rgba(124, 58, 237, 0.12);
+}
+
+.light .glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(1.6);
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  border: 1px solid rgba(124, 58, 237, 0.08);
+}
+
+/* ─── Utility: Premium Select Styling ──────────────── */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+
+.light select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* ─── Utility: Transition Helpers ──────────────────── */
+.transition-colors-fast {
+  transition: color 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.transition-colors-smooth {
+  transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.transition-all-smooth {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.light .hover-lift:hover {
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+}
+
+/* ─── Utility: Animations ──────────────────────────── */
+@keyframes badge-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out both;
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 0.4s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+/* Stagger delay helpers for list items */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
 
 /* Invoice print styles */
 @media print {

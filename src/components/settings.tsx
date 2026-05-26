@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Monitor,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,6 +68,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
   const [showAdminPassword, setShowAdminPassword] = useState(false)
   const [creatingUser, setCreatingUser] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   // Hidden tap to reveal admin
   const handleVersionTap = () => {
@@ -146,7 +148,6 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
   }
 
   const handleDeleteUser = async (userId: string, username: string) => {
-    if (!confirm(`Are you sure you want to delete user "${username}"?`)) return
     try {
       const res = await fetch(`/api/auth/users?id=${userId}`, { method: 'DELETE' })
       if (res.ok) {
@@ -159,6 +160,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' })
     }
+    setDeleteConfirmId(null)
   }
 
   const handleExportCSV = async () => {
@@ -311,26 +313,48 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-card">
-          <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
-                <Mail className="h-3.5 w-3.5 text-[#7C3AED]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
+          {/* Radial glow */}
+          <div
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+            style={{ background: 'radial-gradient(circle, #7C3AED, transparent 70%)' }}
+          />
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#7C3AED40]">
+                <Mail className="h-5 w-5 text-[#7C3AED]" />
               </div>
-              <h3 className="text-foreground text-sm font-semibold">Profile</h3>
-            </div>
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-foreground text-sm font-medium">{currentUser?.username || 'operator_primary'}</p>
-                <p className="text-xs text-muted-foreground">
-                  {currentUser?.role === 'admin' ? 'Admin' : 'Operator'} • {currentUser?.counterName || 'Main Counter'}
-                </p>
+                <h3 className="text-foreground font-bold text-base">Profile</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Your account details</p>
+              </div>
+            </div>
+            {/* User info with avatar */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#7C3AED]/25 to-[#A78BFA]/15 flex items-center justify-center shadow-[0_0_16px_-4px_#7C3AED30]">
+                  <span className="text-[#7C3AED] font-bold text-xl">
+                    {(currentUser?.username || 'O')[0].toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-foreground text-sm font-semibold">{currentUser?.username || 'operator_primary'}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-bold">
+                      {currentUser?.role === 'admin' ? 'Admin' : 'Operator'}
+                    </span>
+                    <span>•</span>
+                    <span>{currentUser?.counterName || 'Main Counter'}</span>
+                  </p>
+                </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1"
+                className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50 gap-1.5 transition-all duration-200 shadow-sm"
                 onClick={onLogout}
               >
                 <LogOut className="h-3.5 w-3.5" /> Sign Out
@@ -346,29 +370,49 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.05 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-card">
-          <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
-                <Monitor className="h-3.5 w-3.5 text-[#7C3AED]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
+          {/* Radial glow */}
+          <div
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+            style={{ background: 'radial-gradient(circle, #7C3AED, transparent 70%)' }}
+          />
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#7C3AED40]">
+                <Monitor className="h-5 w-5 text-[#7C3AED]" />
               </div>
-              <h3 className="text-foreground text-sm font-semibold">Appearance</h3>
+              <div>
+                <h3 className="text-foreground font-bold text-base">Appearance</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Choose your preferred theme</p>
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button
                 variant={theme === 'light' ? 'default' : 'outline'}
-                className={`flex-1 gap-2 ${theme === 'light' ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white' : 'border-border text-foreground hover:bg-muted'}`}
+                className={`flex-1 gap-2 h-11 transition-all duration-300 ${
+                  theme === 'light'
+                    ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-[0_0_24px_-6px_#7C3AED60,0_0_8px_-2px_#7C3AED30] ring-1 ring-[#7C3AED]/30'
+                    : 'border-border text-foreground hover:bg-muted hover:border-[#7C3AED]/30'
+                }`}
                 onClick={() => setTheme('light')}
               >
-                <Sun className="h-4 w-4" /> Light Mode
+                <Sun className={`h-4 w-4 transition-transform duration-300 ${theme === 'light' ? 'scale-110 rotate-12' : ''}`} />
+                Light Mode
               </Button>
               <Button
                 variant={theme === 'dark' ? 'default' : 'outline'}
-                className={`flex-1 gap-2 ${theme === 'dark' ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white' : 'border-border text-foreground hover:bg-muted'}`}
+                className={`flex-1 gap-2 h-11 transition-all duration-300 ${
+                  theme === 'dark'
+                    ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-[0_0_24px_-6px_#7C3AED60,0_0_8px_-2px_#7C3AED30] ring-1 ring-[#7C3AED]/30'
+                    : 'border-border text-foreground hover:bg-muted hover:border-[#7C3AED]/30'
+                }`}
                 onClick={() => setTheme('dark')}
               >
-                <Moon className="h-4 w-4" /> Dark Mode
+                <Moon className={`h-4 w-4 transition-transform duration-300 ${theme === 'dark' ? 'scale-110 -rotate-12' : ''}`} />
+                Dark Mode
               </Button>
             </div>
           </div>
@@ -381,32 +425,42 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-card">
-          <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-6 w-6 rounded-md bg-[#10B981]/20 flex items-center justify-center">
-                <Download className="h-3.5 w-3.5 text-[#10B981]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#10B981]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+          {/* Radial glow */}
+          <div
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+            style={{ background: 'radial-gradient(circle, #10B981, transparent 70%)' }}
+          />
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#10B98140]">
+                <Download className="h-5 w-5 text-[#10B981]" />
               </div>
-              <h3 className="text-foreground text-sm font-semibold">Backup & Restore</h3>
+              <div>
+                <h3 className="text-foreground font-bold text-base">Backup & Restore</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Export or import your data</p>
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="outline"
-                className="flex-1 border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-foreground gap-2"
+                className="flex-1 h-11 border-[#7C3AED]/40 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:border-[#7C3AED]/60 hover:text-foreground gap-2.5 transition-all duration-200 shadow-sm"
                 onClick={handleExportCSV}
                 disabled={exporting}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-4.5 w-4.5" />
                 {exporting ? 'Exporting...' : 'Sync Completed Bills to Sheet'}
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 border-[#10B981]/50 text-[#34D399] hover:bg-[#10B981]/10 hover:text-foreground gap-2"
+                className="flex-1 h-11 border-[#10B981]/40 text-[#34D399] hover:bg-[#10B981]/10 hover:border-[#10B981]/60 hover:text-foreground gap-2.5 transition-all duration-200 shadow-sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={restoring}
               >
-                <Upload className="h-4 w-4" />
+                <Upload className="h-4.5 w-4.5" />
                 {restoring ? 'Restoring...' : 'Restore from CSV'}
               </Button>
               <input
@@ -434,15 +488,29 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#EF4444]/30 bg-card">
-              <div className="h-1 bg-gradient-to-r from-[#EF4444] to-[#F87171]" />
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-[#EF4444]/20 flex items-center justify-center">
-                      <Shield className="h-3.5 w-3.5 text-[#EF4444]" />
+            <div className="relative overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+              {/* Left accent bar */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF4444] to-[#F87171]" />
+              {/* Red secret glow */}
+              <div
+                className="absolute -top-16 -right-16 w-44 h-44 rounded-full opacity-[0.08] dark:opacity-[0.12] pointer-events-none blur-2xl"
+                style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
+              />
+              <div
+                className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full opacity-[0.04] dark:opacity-[0.06] pointer-events-none blur-2xl"
+                style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
+              />
+              <div className="p-5 pl-6">
+                {/* Section Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-[#EF4444]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#EF444440]">
+                      <Shield className="h-5 w-5 text-[#EF4444]" />
                     </div>
-                    <h3 className="text-foreground text-sm font-semibold">User Management (Admin)</h3>
+                    <div>
+                      <h3 className="text-foreground font-bold text-base">User Management</h3>
+                      <p className="text-[#EF4444]/70 text-xs mt-0.5 font-medium">Admin only • Restricted access</p>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
@@ -474,30 +542,59 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                       {users.map((u) => (
                         <div
                           key={u.id}
-                          className="flex items-center justify-between bg-background rounded-lg p-2.5 border border-border"
+                          className="flex items-center justify-between bg-background rounded-xl p-3 border border-border hover:border-[#EF4444]/20 transition-all duration-200"
                         >
-                          <div className="flex items-center gap-2">
-                            <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                              u.role === 'admin' ? 'bg-[#7C3AED]/20 text-[#7C3AED]' : 'bg-[#3B82F6]/20 text-[#3B82F6]'
+                          <div className="flex items-center gap-2.5">
+                            <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm ${
+                              u.role === 'admin'
+                                ? 'bg-gradient-to-br from-[#7C3AED]/25 to-[#A78BFA]/15 text-[#7C3AED]'
+                                : 'bg-gradient-to-br from-[#3B82F6]/25 to-[#60A5FA]/15 text-[#3B82F6]'
                             }`}>
                               {u.username[0].toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-foreground text-xs font-medium">{u.username}</p>
-                              <p className="text-muted-foreground text-[10px]">
-                                {u.role === 'admin' ? 'Admin' : 'Operator'} • {u.counterName || 'No counter'}
+                              <p className="text-foreground text-xs font-semibold">{u.username}</p>
+                              <p className="text-muted-foreground text-[10px] flex items-center gap-1">
+                                <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-bold ${
+                                  u.role === 'admin' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'bg-[#3B82F6]/10 text-[#3B82F6]'
+                                }`}>
+                                  {u.role === 'admin' ? 'Admin' : 'Operator'}
+                                </span>
+                                <span>•</span>
+                                <span>{u.counterName || 'No counter'}</span>
                               </p>
                             </div>
                           </div>
                           {u.id !== currentUser?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteUser(u.id, u.username)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            deleteConfirmId === u.id ? (
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-[10px] text-muted-foreground hover:text-foreground px-2"
+                                  onClick={() => setDeleteConfirmId(null)}
+                                >
+                                  No
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="h-7 text-[10px] px-2 gap-1"
+                                  onClick={() => handleDeleteUser(u.id, u.username)}
+                                >
+                                  <AlertTriangle className="h-3 w-3" /> Delete
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+                                onClick={() => setDeleteConfirmId(u.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )
                           )}
                         </div>
                       ))}
@@ -509,7 +606,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                 {!showNewUserForm ? (
                   <Button
                     variant="outline"
-                    className="w-full border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-foreground gap-2"
+                    className="w-full h-11 border-[#7C3AED]/40 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:border-[#7C3AED]/60 hover:text-foreground gap-2 transition-all duration-200 shadow-sm"
                     onClick={() => setShowNewUserForm(true)}
                   >
                     <Plus className="h-4 w-4" /> Add New Counter / User
@@ -519,7 +616,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onSubmit={handleCreateUser}
-                    className="bg-background rounded-lg p-4 border border-border space-y-3"
+                    className="bg-background rounded-xl p-4 border border-[#7C3AED]/20 space-y-3 shadow-sm"
                   >
                     <h4 className="text-foreground text-xs font-semibold flex items-center gap-1.5">
                       <Plus className="h-3.5 w-3.5 text-[#7C3AED]" /> New User Credentials
@@ -531,7 +628,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                         onChange={(e) => setNewUsername(e.target.value)}
                         placeholder="e.g., counter2"
                         required
-                        className="bg-card border-border text-foreground placeholder:text-muted-foreground h-8 text-sm"
+                        className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
                       />
                     </div>
                     <div>
@@ -542,7 +639,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Min 4 characters"
                         required
-                        className="bg-card border-border text-foreground placeholder:text-muted-foreground h-8 text-sm"
+                        className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -551,7 +648,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                         <select
                           value={newRole}
                           onChange={(e) => setNewRole(e.target.value)}
-                          className="w-full h-8 text-sm bg-card border border-border text-foreground rounded-md px-2"
+                          className="w-full h-9 text-sm bg-card border border-border text-foreground rounded-md px-2 focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
                         >
                           <option value="operator">Operator</option>
                           <option value="admin">Admin</option>
@@ -563,7 +660,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                           value={newCounterName}
                           onChange={(e) => setNewCounterName(e.target.value)}
                           placeholder="e.g., Counter 2"
-                          className="bg-card border-border text-foreground placeholder:text-muted-foreground h-8 text-sm"
+                          className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm focus:border-[#7C3AED]/50 focus:ring-1 focus:ring-[#7C3AED]/20 transition-all duration-200"
                         />
                       </div>
                     </div>
@@ -579,12 +676,12 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                           onChange={(e) => setAdminPassword(e.target.value)}
                           placeholder="Enter your admin password"
                           required
-                          className="bg-card border-border text-foreground placeholder:text-muted-foreground h-8 text-sm pr-10"
+                          className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm pr-10 focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20 transition-all duration-200"
                         />
                         <button
                           type="button"
                           onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {showAdminPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
@@ -594,7 +691,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm"
+                        className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm h-9"
                         onClick={() => {
                           setShowNewUserForm(false)
                           setNewUsername('')
@@ -608,7 +705,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1 text-sm"
+                        className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1 text-sm h-9 shadow-[0_0_12px_-4px_#7C3AED40]"
                         disabled={creatingUser}
                       >
                         {creatingUser ? (
@@ -633,39 +730,66 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#3B82F6]/30 bg-card">
-          <div className="h-1 bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-6 w-6 rounded-md bg-[#3B82F6]/20 flex items-center justify-center">
-                <Info className="h-3.5 w-3.5 text-[#3B82F6]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#3B82F6]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#3B82F6] to-[#60A5FA]" />
+          {/* Radial glow */}
+          <div
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+            style={{ background: 'radial-gradient(circle, #3B82F6, transparent 70%)' }}
+          />
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#3B82F6]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#3B82F640]">
+                <Info className="h-5 w-5 text-[#3B82F6]" />
               </div>
-              <h3 className="text-foreground text-sm font-semibold">App Info</h3>
+              <div>
+                <h3 className="text-foreground font-bold text-base">App Info</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">About this application</p>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-muted-foreground">App Name</span>
-              <span className="text-foreground font-medium">Sri Krishna Mobiles Bill Generator</span>
-              <span className="text-muted-foreground">Version</span>
-              {/* Tap version 5 times to reveal admin panel */}
-              <span
-                className="text-foreground font-medium cursor-pointer select-none hover:text-[#7C3AED] transition-colors"
-                onClick={handleVersionTap}
-                title={tapCount > 0 ? `${5 - tapCount} more tap${5 - tapCount > 1 ? 's' : ''} to unlock admin` : ''}
-              >
-                1.0.0
-              </span>
-              <span className="text-muted-foreground">Framework</span>
-              <span className="text-foreground font-medium">Next.js 16</span>
-              <span className="text-muted-foreground">Database</span>
-              <span className="text-foreground font-medium">SQLite (Prisma)</span>
-              <span className="text-muted-foreground">Sync</span>
-              <span className="text-foreground font-medium flex items-center gap-1">
-                <CheckCircle className="h-3 w-3 text-[#10B981]" /> Real-time (WebSocket)
-              </span>
+            <div className="space-y-0">
+              {[
+                { label: 'App Name', value: 'Sri Krishna Mobiles Bill Generator', isVersion: false },
+                { label: 'Version', value: '1.0.0', isVersion: true },
+                { label: 'Framework', value: 'Next.js 16', isVersion: false },
+                { label: 'Database', value: 'SQLite (Prisma)', isVersion: false },
+              ].map((item, idx) => (
+                <div
+                  key={item.label}
+                  className={`flex items-center justify-between text-sm py-2.5 ${
+                    idx < 3 ? 'border-b border-border/50' : ''
+                  }`}
+                >
+                  <span className="text-muted-foreground">{item.label}</span>
+                  {item.isVersion ? (
+                    <span
+                      className="text-foreground font-semibold cursor-pointer select-none hover:text-[#7C3AED] transition-colors duration-200 px-2 py-0.5 rounded-md hover:bg-[#7C3AED]/5"
+                      onClick={handleVersionTap}
+                      title={tapCount > 0 ? `${5 - tapCount} more tap${5 - tapCount > 1 ? 's' : ''} to unlock admin` : ''}
+                    >
+                      {item.value}
+                    </span>
+                  ) : (
+                    <span className="text-foreground font-medium">{item.value}</span>
+                  )}
+                </div>
+              ))}
+              <div className={`flex items-center justify-between text-sm py-2.5`}>
+                <span className="text-muted-foreground">Sync</span>
+                <span className="text-foreground font-medium flex items-center gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5 text-[#10B981]" /> Real-time (WebSocket)
+                </span>
+              </div>
             </div>
-            <Separator className="bg-border my-3" />
-            <p className="text-xs text-muted-foreground text-center">
-              Built with ❤️ for Sri Krishna Mobiles, Narayanpet
+            <Separator className="bg-border/50 my-3" />
+            <p className="text-xs text-center font-medium">
+              <span className="text-muted-foreground">Built with </span>
+              <span className="text-[#EF4444]">&#10084;&#65039;</span>
+              <span className="text-muted-foreground"> for </span>
+              <span className="text-foreground font-semibold">Sri Krishna Mobiles</span>
+              <span className="text-muted-foreground">, Narayanpet</span>
             </p>
           </div>
         </div>

@@ -99,20 +99,20 @@ export function Login({ onLogin }: LoginProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background login-bg-pattern p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="w-full max-w-md"
       >
         {/* Logo Header */}
         <div className="text-center mb-8">
           <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] shadow-xl shadow-[#7C3AED]/30 mb-4"
+            initial={{ y: -20, opacity: 0, scale: 0.8 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 15 }}
+            className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] shadow-xl shadow-[#7C3AED]/30 mb-4 ring-1 ring-[#7C3AED]/20"
           >
             <Receipt className="h-8 w-8 text-white" />
           </motion.div>
@@ -140,10 +140,10 @@ export function Login({ onLogin }: LoginProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-card border border-border rounded-2xl p-6 shadow-xl"
+            className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-2xl shadow-black/10 ring-1 ring-white/[0.03]"
           >
             <div className="flex items-center gap-2 mb-5">
-              <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center ring-1 ring-[#7C3AED]/10">
                 <Shield className="h-4 w-4 text-[#7C3AED]" />
               </div>
               <div>
@@ -160,7 +160,7 @@ export function Login({ onLogin }: LoginProps) {
                   onChange={(e) => setSetupUsername(e.target.value)}
                   placeholder="e.g., admin"
                   required
-                  className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] h-10"
+                  className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 transition-all duration-200 rounded-lg"
                 />
               </div>
               <div>
@@ -172,7 +172,7 @@ export function Login({ onLogin }: LoginProps) {
                     onChange={(e) => setSetupPassword(e.target.value)}
                     placeholder="Create a strong password"
                     required
-                    className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] h-10 pr-10"
+                    className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 pr-10 transition-all duration-200 rounded-lg"
                   />
                   <button
                     type="button"
@@ -185,7 +185,7 @@ export function Login({ onLogin }: LoginProps) {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25"
+                className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25 transition-all duration-200 hover:shadow-xl hover:shadow-[#7C3AED]/30"
                 disabled={setupLoading}
               >
                 {setupLoading ? (
@@ -203,10 +203,10 @@ export function Login({ onLogin }: LoginProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-card border border-border rounded-2xl p-6 shadow-xl"
+            className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-2xl shadow-black/10 ring-1 ring-white/[0.03]"
           >
             <div className="flex items-center gap-2 mb-5">
-              <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center ring-1 ring-[#7C3AED]/10">
                 <LogIn className="h-4 w-4 text-[#7C3AED]" />
               </div>
               <div>
@@ -224,7 +224,7 @@ export function Login({ onLogin }: LoginProps) {
                   placeholder="Enter your username"
                   required
                   autoFocus
-                  className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] h-10"
+                  className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 transition-all duration-200 rounded-lg"
                 />
               </div>
               <div>
@@ -236,7 +236,7 @@ export function Login({ onLogin }: LoginProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
-                    className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] h-10 pr-10"
+                    className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 pr-10 transition-all duration-200 rounded-lg"
                   />
                   <button
                     type="button"
@@ -249,7 +249,7 @@ export function Login({ onLogin }: LoginProps) {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25"
+                className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25 transition-all duration-200 hover:shadow-xl hover:shadow-[#7C3AED]/30"
                 disabled={loading}
               >
                 {loading ? (
@@ -261,7 +261,7 @@ export function Login({ onLogin }: LoginProps) {
               </Button>
             </form>
 
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-4 pt-4 border-t border-border/50">
               <p className="text-center text-xs text-muted-foreground">
                 First time?{' '}
                 <button

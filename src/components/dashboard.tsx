@@ -57,33 +57,92 @@ interface MetricCardProps {
 }
 
 function MetricCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }: MetricCardProps) {
+  const [hovered, setHovered] = useState(false)
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
+      transition={{ duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       <div
-        className="relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group bg-card"
-        style={{ borderColor: accentColor }}
+        className="group relative overflow-hidden rounded-2xl border bg-card
+                    transition-all duration-300 ease-out
+                    hover:-translate-y-1
+                    cursor-default"
+        style={{
+          borderColor: hovered ? 'transparent' : undefined,
+          boxShadow: hovered
+            ? `0 8px 30px -8px ${accentColor}35, 0 0 20px -6px ${accentColor}20`
+            : undefined,
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        {/* Gradient accent at top */}
+        {/* Subtle accent gradient overlay on the card */}
         <div
-          className="absolute top-0 left-0 right-0 h-1"
-          style={{ background: `linear-gradient(90deg, ${accentColor}, ${gradientFrom})` }}
+          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+          style={{
+            opacity: hovered ? 1 : 0,
+            background: `linear-gradient(135deg, ${accentColor}08 0%, transparent 60%)`,
+          }}
         />
-        <div className="p-4">
-          <div className="flex items-start justify-between gap-2">
+
+        {/* Subtle dot pattern overlay for visual texture */}
+        <div
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle, ${accentColor} 1px, transparent 1px)`,
+            backgroundSize: '16px 16px',
+          }}
+        />
+
+        {/* Radial glow from top-right corner */}
+        <div
+          className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+          style={{
+            background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
+          }}
+        />
+
+        {/* Left-side color bar */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+          style={{
+            background: `linear-gradient(180deg, ${accentColor}, ${gradientFrom})`,
+          }}
+        />
+
+        <div className="relative p-5 pl-6">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: accentColor }}>
+              <p
+                className="text-[11px] font-bold uppercase tracking-[0.1em] truncate"
+                style={{ color: accentColor }}
+              >
                 {title}
               </p>
-              <p className="text-2xl font-bold text-foreground mt-1.5 truncate">{value}</p>
+              <p className="text-3xl font-extrabold text-foreground mt-2 tracking-tight truncate leading-none">
+                {value}
+              </p>
             </div>
+            {/* Circular icon with glow */}
             <div
-              className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-              style={{ backgroundColor: `${accentColor}25` }}
+              className="relative h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0
+                          transition-all duration-300"
+              style={{
+                background: `linear-gradient(135deg, ${accentColor}${hovered ? '25' : '18'}, ${accentColor}${hovered ? '12' : '08'})`,
+                transform: hovered ? 'scale(1.1)' : undefined,
+                boxShadow: hovered
+                  ? `0 0 20px -4px ${accentColor}40, 0 0 8px -2px ${accentColor}25`
+                  : 'none',
+              }}
             >
+              {/* Inner ring */}
+              <div
+                className="absolute inset-[2px] rounded-full border transition-colors duration-300"
+                style={{ borderColor: `${accentColor}${hovered ? '35' : '20'}` }}
+              />
               <div style={{ color: accentColor }}>{icon}</div>
             </div>
           </div>
@@ -236,7 +295,7 @@ export function Dashboard() {
       icon: <TrendingUp className="h-5 w-5" />,
       accentColor: '#7C3AED',
       gradientFrom: '#A78BFA',
-      delay: 0.05,
+      delay: 0.06,
     },
     {
       title: 'Month Sales',
@@ -244,7 +303,7 @@ export function Dashboard() {
       icon: <CalendarDays className="h-5 w-5" />,
       accentColor: '#3B82F6',
       gradientFrom: '#60A5FA',
-      delay: 0.1,
+      delay: 0.12,
     },
     {
       title: 'Pending Amount',
@@ -252,7 +311,7 @@ export function Dashboard() {
       icon: <Clock className="h-5 w-5" />,
       accentColor: '#F59E0B',
       gradientFrom: '#FBBF24',
-      delay: 0.15,
+      delay: 0.18,
     },
     {
       title: 'Pending Bills',
@@ -260,7 +319,7 @@ export function Dashboard() {
       icon: <AlertCircle className="h-5 w-5" />,
       accentColor: '#EF4444',
       gradientFrom: '#F87171',
-      delay: 0.2,
+      delay: 0.24,
     },
     {
       title: "Today's Bills",
@@ -268,12 +327,12 @@ export function Dashboard() {
       icon: <CheckCircle className="h-5 w-5" />,
       accentColor: '#06B6D4',
       gradientFrom: '#22D3EE',
-      delay: 0.25,
+      delay: 0.3,
     },
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Sync Status & Refresh */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -302,7 +361,7 @@ export function Dashboard() {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.title} {...metric} />
         ))}
@@ -312,49 +371,68 @@ export function Dashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.3 }}
+        transition={{ duration: 0.4, delay: 0.35 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#F59E0B]/40 bg-card">
-          <div className="h-1 bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]" />
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center">
-                <AlertCircle className="h-4 w-4 text-[#F59E0B]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#F59E0B]/25 bg-card">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#F59E0B] to-[#FBBF24]" />
+
+          {/* Subtle background glow */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+            style={{ background: '#F59E0B' }}
+          />
+
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#F59E0B]/15 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-[#F59E0B]" />
+                </div>
+                <div>
+                  <h3 className="text-foreground font-bold text-base">
+                    Pending Bills
+                  </h3>
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    Awaiting payment or finalization
+                  </p>
+                </div>
               </div>
-              <h3 className="text-foreground font-semibold text-sm">
-                Pending Bills
-              </h3>
-              <Badge className="bg-[#F59E0B]/20 text-[#F59E0B] border-0 text-xs px-2">
+              <Badge className="bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/25 text-xs px-3 py-1 font-bold">
                 {pendingList.length}
               </Badge>
             </div>
 
             {pendingList.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">
-                No pending bills. All caught up!
-              </p>
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <CheckCircle className="h-10 w-10 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No pending bills</p>
+                <p className="text-xs opacity-70">All caught up!</p>
+              </div>
             ) : (
               <ScrollArea className="max-h-60">
                 <div className="space-y-2">
                   {pendingList.map((bill: any) => (
                     <div
                       key={bill.id}
-                      className="flex items-center justify-between bg-background rounded-lg p-3 border border-border hover:border-[#F59E0B]/30 transition-colors"
+                      className="flex items-center justify-between bg-background rounded-xl p-3.5 border border-border
+                                  hover:border-[#F59E0B]/30 transition-all duration-200 group"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground truncate">
+                          <span className="text-sm font-semibold text-foreground truncate">
                             {bill.customerName}
                           </span>
                           <span className="text-xs text-muted-foreground truncate">
                             {bill.mobileName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 mt-1">
+                          <Receipt className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground font-mono">
                             {bill.invoiceId}
                           </span>
-                          <span className="text-xs text-[#F59E0B] font-semibold">
+                          <span className="text-xs text-[#F59E0B] font-bold">
                             {formatCurrency(bill.grandTotal)}
                           </span>
                         </div>
@@ -401,24 +479,39 @@ export function Dashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.35 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-card">
-          <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-[#10B981]/20 flex items-center justify-center">
-                <FileText className="h-4 w-4 text-[#10B981]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#10B981]/25 bg-card">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+
+          {/* Subtle background glow */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+            style={{ background: '#10B981' }}
+          />
+
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-[#10B981]" />
               </div>
-              <h3 className="text-foreground font-semibold text-sm">
-                Recent Completed Bills
-              </h3>
+              <div>
+                <h3 className="text-foreground font-bold text-base">
+                  Recent Completed Bills
+                </h3>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  Successfully finalized invoices
+                </p>
+              </div>
             </div>
 
             {data.recentBills.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">
-                No completed bills yet. Create your first bill!
-              </p>
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <Receipt className="h-10 w-10 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No completed bills yet</p>
+                <p className="text-xs opacity-70">Create your first bill!</p>
+              </div>
             ) : (
               <ScrollArea className="max-h-96">
                 <div className="space-y-2">
@@ -428,34 +521,40 @@ export function Dashboard() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.03 }}
-                      className="flex items-center justify-between bg-background rounded-lg p-3 border border-border hover:border-[#10B981]/30 transition-colors"
+                      className="flex items-center justify-between bg-background rounded-xl p-3.5 border border-border
+                                  hover:border-[#10B981]/30 transition-all duration-200"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground truncate">
+                          <span className="text-sm font-semibold text-foreground truncate">
                             {bill.customerName}
                           </span>
                           <span className="text-xs text-muted-foreground truncate">
                             {bill.mobileName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-2 mt-1">
+                          <Receipt className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {bill.invoiceId}
+                          </span>
+                          <span className="text-xs text-muted-foreground">•</span>
                           <span className="text-xs text-muted-foreground">
-                            {bill.invoiceId} • {bill.date}
+                            {bill.date}
                           </span>
                           {bill.paymentStatus === 'Paid' ? (
-                            <Badge className="bg-[#10B981]/15 text-[#10B981] border-0 text-[10px] h-5 px-2 font-semibold">
+                            <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[10px] h-5 px-2 font-bold">
                               Paid
                             </Badge>
                           ) : (
-                            <Badge className="bg-[#F59E0B]/15 text-[#F59E0B] border-0 text-[10px] h-5 px-2 font-semibold">
+                            <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[10px] h-5 px-2 font-bold">
                               {bill.paymentStatus}
                             </Badge>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-foreground">
+                        <span className="text-sm font-extrabold text-foreground">
                           {formatCurrency(bill.grandTotal)}
                         </span>
                         <Button

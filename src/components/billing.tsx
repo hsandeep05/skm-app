@@ -60,8 +60,8 @@ function formatCurrency(amount: number): string {
 }
 
 // Theme-aware input classes
-const inputClass = "bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] h-9"
-const smallInputClass = "bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] text-sm h-8"
+const inputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 h-9"
+const smallInputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 text-sm h-8"
 
 export function Billing() {
   const [customerName, setCustomerName] = useState('')
@@ -264,14 +264,15 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-card">
-              <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
+            <div className="overflow-hidden rounded-xl border border-[#7C3AED]/20 bg-card relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#7C3AED]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="p-5 pl-6">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="h-7 w-7 rounded-lg bg-[#7C3AED]/15 flex items-center justify-center ring-1 ring-[#7C3AED]/20">
                     <span className="text-[#7C3AED] text-xs font-bold">C</span>
                   </div>
-                  <h3 className="text-foreground text-sm font-semibold">Customer Information</h3>
+                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Customer Information</h3>
                 </div>
                 <div className="space-y-3">
                   <div>
@@ -312,17 +313,18 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#3B82F6]/30 bg-card">
-              <div className="h-1 bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-6 w-6 rounded-md bg-[#3B82F6]/20 flex items-center justify-center">
+            <div className="overflow-hidden rounded-xl border border-[#3B82F6]/20 bg-card relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#3B82F6] to-[#60A5FA]" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="p-5 pl-6">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="h-7 w-7 rounded-lg bg-[#3B82F6]/15 flex items-center justify-center ring-1 ring-[#3B82F6]/20">
                     <span className="text-[#3B82F6] text-xs font-bold">S</span>
                   </div>
-                  <h3 className="text-foreground text-sm font-semibold">Service Catalog</h3>
+                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Service Catalog</h3>
                 </div>
                 <Select onValueChange={addServiceItem}>
-                  <SelectTrigger className="w-full bg-background border-border text-foreground focus:border-[#7C3AED]">
+                  <SelectTrigger className="w-full bg-background border-border/70 text-foreground hover:border-[#3B82F6]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-200 h-9">
                     <SelectValue placeholder="Select a service to add..." />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
@@ -351,14 +353,15 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.1 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#F59E0B]/30 bg-card">
-              <div className="h-1 bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]" />
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-6 w-6 rounded-md bg-[#F59E0B]/20 flex items-center justify-center">
+            <div className="overflow-hidden rounded-xl border border-[#F59E0B]/20 bg-card relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#F59E0B] to-[#FBBF24]" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#F59E0B]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="p-5 pl-6">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="h-7 w-7 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center ring-1 ring-[#F59E0B]/20">
                     <span className="text-[#F59E0B] text-xs font-bold">{items.length}</span>
                   </div>
-                  <h3 className="text-foreground text-sm font-semibold">Line Items</h3>
+                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Line Items</h3>
                 </div>
                 <div className="space-y-3">
                   <AnimatePresence>
@@ -368,11 +371,11 @@ export function Billing() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-background rounded-lg p-3 border border-border space-y-2"
+                        className="bg-background rounded-lg p-3 border border-border/60 hover:border-[#F59E0B]/30 hover:shadow-sm transition-all duration-200 space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[#7C3AED]">#{idx + 1}</span>
+                            <span className="text-[10px] font-bold text-[#7C3AED] bg-[#7C3AED]/10 px-1.5 py-0.5 rounded-md">#{idx + 1}</span>
                             {item.isCustom && (
                               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA]">Custom</span>
                             )}
@@ -399,7 +402,7 @@ export function Billing() {
                             className={`${smallInputClass} disabled:opacity-80 disabled:text-muted-foreground`}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 bg-muted/30 rounded-lg p-2 -mx-1">
                           <div>
                             <Label className="text-muted-foreground text-[10px] font-medium">Cost Price</Label>
                             <Input
@@ -440,14 +443,15 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.15 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-card">
-              <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-6 w-6 rounded-md bg-[#10B981]/20 flex items-center justify-center">
+            <div className="overflow-hidden rounded-xl border border-[#10B981]/20 bg-card relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#10B981]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="p-5 pl-6">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="h-7 w-7 rounded-lg bg-[#10B981]/15 flex items-center justify-center ring-1 ring-[#10B981]/20">
                     <span className="text-[#10B981] text-xs font-bold">₹</span>
                   </div>
-                  <h3 className="text-foreground text-sm font-semibold">Financial Summary</h3>
+                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Financial Summary</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
@@ -465,9 +469,9 @@ export function Billing() {
                     />
                   </div>
                   <Separator className="bg-border" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-foreground font-bold">Grand Total</span>
-                    <span className="text-2xl font-bold text-[#10B981]">{formatCurrency(grandTotal)}</span>
+                  <div className="flex justify-between items-center bg-[#10B981]/[0.07] -mx-2 px-3 py-2.5 rounded-lg">
+                    <span className="text-foreground font-bold text-sm">Grand Total</span>
+                    <span className="text-2xl font-bold text-[#10B981] tabular-nums">{formatCurrency(grandTotal)}</span>
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs font-medium">Amount Paid</Label>
@@ -479,13 +483,16 @@ export function Billing() {
                       className={inputClass}
                     />
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-lg"
-                    style={{ backgroundColor: balanceDue <= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }}
+                  <div className="flex justify-between items-center p-2.5 rounded-lg border transition-all duration-300"
+                    style={{ 
+                      backgroundColor: balanceDue <= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)',
+                      borderColor: balanceDue <= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'
+                    }}
                   >
                     <span className="text-sm font-medium" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
                       Balance Due
                     </span>
-                    <span className="text-lg font-bold" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
+                    <span className="text-lg font-bold tabular-nums" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
                       {formatCurrency(balanceDue)}
                     </span>
                   </div>
@@ -498,14 +505,14 @@ export function Billing() {
           <div className="flex gap-3 pb-4">
             <Button
               variant="outline"
-              className="flex-1 border-border text-muted-foreground hover:bg-muted hover:text-foreground gap-2 h-10"
+              className="flex-1 border-border/70 text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:border-border gap-2 h-10 shadow-sm hover:shadow transition-all duration-200"
               onClick={() => saveInvoice('pending')}
               disabled={saving}
             >
               <Save className="h-4 w-4" /> Save as Pending
             </Button>
             <Button
-              className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 shadow-lg shadow-[#7C3AED]/25 h-10"
+              className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25 hover:shadow-xl hover:shadow-[#7C3AED]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
               onClick={() => saveInvoice('completed')}
               disabled={saving}
             >
@@ -518,10 +525,12 @@ export function Billing() {
       {/* RIGHT PANEL - Live Invoice Preview (Desktop) */}
       <div className="hidden lg:block">
         <div className="sticky top-20">
-          <h3 className="text-foreground text-sm font-semibold mb-3 flex items-center gap-2">
-            <Eye className="h-4 w-4 text-[#7C3AED]" /> Live Invoice Preview
+          <h3 className="text-foreground text-sm font-semibold mb-3 flex items-center gap-2 tracking-tight">
+            <div className="h-6 w-6 rounded-md bg-[#7C3AED]/15 flex items-center justify-center ring-1 ring-[#7C3AED]/20">
+              <Eye className="h-3.5 w-3.5 text-[#7C3AED]" />
+            </div> Live Invoice Preview
           </h3>
-          <div className="bg-background rounded-xl p-4 border border-border max-h-[calc(100vh-12rem)] overflow-y-auto">
+          <div className="bg-background rounded-xl p-4 border border-border/60 shadow-sm max-h-[calc(100vh-12rem)] overflow-y-auto">
             <InvoicePreview data={invoiceData} />
           </div>
         </div>
