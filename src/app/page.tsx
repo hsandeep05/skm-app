@@ -195,7 +195,6 @@ export default function SriKrishnaApp() {
               size="icon"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted"
-              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
@@ -205,7 +204,6 @@ export default function SriKrishnaApp() {
               size="sm"
               onClick={handleLogout}
               className="hidden md:flex text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5"
-              title="Sign Out"
             >
               <LogOut className="h-3.5 w-3.5" /> Sign Out
             </Button>

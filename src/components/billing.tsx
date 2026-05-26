@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Save, Send, Eye, EyeOff } from 'lucide-react'
+import { Plus, Trash2, Save, Send, Eye, EyeOff, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
@@ -67,9 +68,11 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [mobileName, setMobileName] = useState('')
+  const [billDate, setBillDate] = useState(() => new Date().toISOString().split('T')[0])
   const [items, setItems] = useState<LineItem[]>([])
   const [discount, setDiscount] = useState(0)
   const [amountPaid, setAmountPaid] = useState(0)
+  const [totalPaidChecked, setTotalPaidChecked] = useState(false)
   const [saving, setSaving] = useState(false)
   const [visibleCostPrices, setVisibleCostPrices] = useState<Set<string>>(new Set())
   const [showMobilePreview, setShowMobilePreview] = useState(false)
@@ -119,7 +122,7 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
     customerName: customerName || 'Walk-in Customer',
     customerPhone: customerPhone || undefined,
     mobileName: mobileName || 'N/A',
-    date: new Date().toISOString().split('T')[0],
+    date: billDate,
     items: items.map((item) => ({
       description: item.description,
       costPrice: item.costPrice,
@@ -131,15 +134,17 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
     amountPaid,
     balanceDue,
     shopLogo,
-  }), [customerName, customerPhone, mobileName, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo])
+  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo])
 
   const resetForm = useCallback(() => {
     setCustomerName('')
     setCustomerPhone('')
     setMobileName('')
+    setBillDate(new Date().toISOString().split('T')[0])
     setItems([])
     setDiscount(0)
     setAmountPaid(0)
+    setTotalPaidChecked(false)
   }, [])
 
   const saveInvoice = async (status: 'pending' | 'completed') => {
@@ -221,7 +226,7 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
           id: invoicePayload.tempId,
           tempId: invoicePayload.tempId,
           syncStatus: 'pending',
-          date: new Date().toISOString().split('T')[0],
+          date: billDate,
           customerName: invoicePayload.customerName,
           customerPhone: invoicePayload.customerPhone || undefined,
           mobileName: invoicePayload.mobileName,
@@ -301,6 +306,15 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
                       value={mobileName}
                       onChange={(e) => setMobileName(e.target.value)}
                       placeholder="e.g., Vivo Y21, Samsung S24"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs font-medium">Bill Date</Label>
+                    <Input
+                      type="date"
+                      value={billDate}
+                      onChange={(e) => setBillDate(e.target.value)}
                       className={inputClass}
                     />
                   </div>
@@ -504,10 +518,32 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
                     <Input
                       type="number"
                       value={amountPaid || ''}
-                      onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0
+                        setAmountPaid(val)
+                        setTotalPaidChecked(val >= grandTotal && grandTotal > 0)
+                      }}
                       placeholder="₹0"
                       className={inputClass}
                     />
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Checkbox
+                      id="totalPaid"
+                      checked={totalPaidChecked}
+                      onCheckedChange={(checked) => {
+                        setTotalPaidChecked(checked === true)
+                        if (checked) {
+                          setAmountPaid(grandTotal)
+                        } else {
+                          setAmountPaid(0)
+                        }
+                      }}
+                      className="border-[#10B981]/50 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] data-[state=checked]:text-white"
+                    />
+                    <Label htmlFor="totalPaid" className="text-muted-foreground text-xs font-medium cursor-pointer select-none">
+                      Total Amount Paid
+                    </Label>
                   </div>
                   <div className="flex justify-between items-center p-2.5 rounded-lg border transition-all duration-300"
                     style={{ 
@@ -539,10 +575,32 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
             </Button>
             <Button
               className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25 hover:shadow-xl hover:shadow-[#7C3AED]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-              onClick={() => saveInvoice('completed')}
+              onClick={() => {
+                if (balanceDue > 0) {
+                  toast({
+                    title: 'Balance Due',
+                    description: 'Bill has balance due. Save as Pending first.',
+                    variant: 'destructive',
+                  })
+                  saveInvoice('pending')
+                } else {
+                  saveInvoice('completed')
+                }
+              }}
               disabled={saving}
             >
               <Send className="h-4 w-4" /> {saving ? 'Processing...' : 'Finalize & Sync'}
+            </Button>
+          </div>
+
+          {/* Mobile Preview Button */}
+          <div className="lg:hidden pb-4">
+            <Button
+              variant="outline"
+              className="w-full border-[#7C3AED]/30 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-foreground gap-2 h-10"
+              onClick={() => setShowMobilePreview(true)}
+            >
+              <FileText className="h-4 w-4" /> Preview Bill
             </Button>
           </div>
         </div>

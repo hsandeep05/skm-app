@@ -453,7 +453,6 @@ export function Dashboard() {
                           size="icon"
                           className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/10"
                           onClick={() => handleViewInvoice(bill)}
-                          title="View"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -462,7 +461,6 @@ export function Dashboard() {
                           size="icon"
                           className="h-8 w-8 text-[#10B981] hover:bg-[#10B981]/10"
                           onClick={() => handleFinalize(bill.id)}
-                          title="Finalize"
                         >
                           <Send className="h-4 w-4" />
                         </Button>
@@ -471,7 +469,6 @@ export function Dashboard() {
                           size="icon"
                           className="h-8 w-8 text-red-400 hover:bg-red-400/10"
                           onClick={() => setDeleteConfirm(bill.id)}
-                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

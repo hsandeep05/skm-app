@@ -3,11 +3,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
-import { DollarSign, TrendingUp, Clock, BarChart3 } from 'lucide-react'
+import { DollarSign, TrendingUp, Clock, BarChart3, CheckCircle, Eye, FileText, Receipt } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 
 interface AnalyticsData {
   date: string
@@ -103,7 +113,7 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
               >
                 {title}
               </p>
-              <p className="text-3xl font-extrabold text-foreground mt-2 tracking-tight truncate leading-none">
+              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground mt-2 tracking-tight truncate leading-none">
                 {value}
               </p>
             </div>
@@ -154,6 +164,10 @@ export function Analytics() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [completedBills, setCompletedBills] = useState<any[]>([])
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [shopLogo, setShopLogo] = useState<string | null>(null)
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true)
@@ -170,9 +184,56 @@ export function Analytics() {
     }
   }, [selectedDate])
 
+  const fetchCompletedBills = useCallback(async () => {
+    try {
+      const res = await fetch('/api/invoices?status=completed')
+      if (res.ok) {
+        const json = await res.json()
+        setCompletedBills(json.invoices || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch completed bills:', err)
+    }
+  }, [])
+
+  // Load shop logo
+  useEffect(() => {
+    fetch('/api/logo')
+      .then(res => res.json())
+      .then(d => { if (d.logo) setShopLogo(d.logo) })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetchAnalytics()
   }, [fetchAnalytics])
+
+  useEffect(() => {
+    fetchCompletedBills()
+  }, [fetchCompletedBills])
+
+  const handleViewInvoice = (bill: any) => {
+    const invoiceData: InvoiceData = {
+      invoiceId: bill.invoiceId,
+      customerName: bill.customerName,
+      customerPhone: bill.customerPhone || undefined,
+      mobileName: bill.mobileName,
+      date: bill.date,
+      items: bill.items?.map((i: any) => ({
+        description: i.description,
+        costPrice: i.costPrice,
+        sellingPrice: i.sellingPrice,
+      })) || [],
+      subtotal: bill.subtotal,
+      discount: bill.discount,
+      grandTotal: bill.grandTotal,
+      amountPaid: bill.amountPaid,
+      balanceDue: bill.balanceDue,
+      shopLogo,
+    }
+    setSelectedInvoice(invoiceData)
+    setModalOpen(true)
+  }
 
   const summaryCards: SummaryCardProps[] = data
     ? [
@@ -330,6 +391,128 @@ export function Analytics() {
         </div>
       </div>
       </motion.div>
+
+      {/* Recent Completed Bills */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-[#10B981]/25 bg-card">
+          {/* Left accent bar */}
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+
+          {/* Subtle background glow */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+            style={{ background: '#10B981' }}
+          />
+
+          <div className="p-5 pl-6">
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-[#10B981]" />
+                </div>
+                <div>
+                  <h3 className="text-foreground font-bold text-base">
+                    Recent Completed Bills
+                  </h3>
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    Successfully finalized invoices
+                  </p>
+                </div>
+              </div>
+              <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/25 text-xs px-3 py-1 font-bold">
+                {completedBills.length}
+              </Badge>
+            </div>
+
+            {completedBills.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <CheckCircle className="h-10 w-10 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No completed bills yet</p>
+                <p className="text-xs opacity-70">Create and finalize your first bill!</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-96">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {completedBills.map((bill: any, idx: number) => (
+                    <motion.div
+                      key={bill.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="relative bg-background rounded-xl p-4 border border-border
+                                  hover:border-[#10B981]/30 transition-all duration-200 group"
+                    >
+                      {/* Customer Name & Mobile */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground truncate">
+                            {bill.customerName}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {bill.mobileName}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleViewInvoice(bill)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+
+                      {/* Invoice ID & Date */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Receipt className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground font-mono truncate">
+                          {bill.invoiceId}
+                        </span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {bill.date}
+                        </span>
+                      </div>
+
+                      {/* Grand Total & Payment Status */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-extrabold text-foreground">
+                          {formatCurrency(bill.grandTotal)}
+                        </span>
+                        {bill.paymentStatus === 'Paid' ? (
+                          <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[10px] h-5 px-2 font-bold">
+                            Paid
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[10px] h-5 px-2 font-bold">
+                            {bill.paymentStatus}
+                          </Badge>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Invoice Preview Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Invoice Preview</DialogTitle>
+          </DialogHeader>
+          {selectedInvoice && (
+            <InvoicePreview data={selectedInvoice} showDownload />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

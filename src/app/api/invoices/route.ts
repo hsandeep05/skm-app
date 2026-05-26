@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       status,
       updatedBy,
       tempId,
+      date,
     } = body
 
     // Generate sequential invoice ID
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         invoiceId,
         tempId: tempId || null,
         syncStatus: 'synced',
-        date: new Date().toISOString().split('T')[0],
+        date: date || new Date().toISOString().split('T')[0],
         customerName: customerName || 'Walk-in Customer',
         customerPhone: customerPhone || null,
         mobileName,
