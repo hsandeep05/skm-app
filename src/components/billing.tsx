@@ -59,9 +59,9 @@ function formatCurrency(amount: number): string {
   return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-// Shared input class with bright visible styling
-const inputClass = "bg-[#0F172A] border-[#334155] text-white placeholder:text-[#64748B] focus:border-[#7C3AED] h-9"
-const smallInputClass = "bg-[#0F172A] border-[#334155] text-white placeholder:text-[#64748B] focus:border-[#7C3AED] text-sm h-8"
+// Theme-aware input classes
+const inputClass = "bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] h-9"
+const smallInputClass = "bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-[#7C3AED] text-sm h-8"
 
 export function Billing() {
   const [customerName, setCustomerName] = useState('')
@@ -264,18 +264,18 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-[#111827]">
+            <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-card">
               <div className="h-1 bg-gradient-to-r from-[#7C3AED] to-[#A78BFA]" />
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-6 w-6 rounded-md bg-[#7C3AED]/20 flex items-center justify-center">
                     <span className="text-[#7C3AED] text-xs font-bold">C</span>
                   </div>
-                  <h3 className="text-white text-sm font-semibold">Customer Information</h3>
+                  <h3 className="text-foreground text-sm font-semibold">Customer Information</h3>
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-[#CBD5E1] text-xs font-medium">Customer Name</Label>
+                    <Label className="text-muted-foreground text-xs font-medium">Customer Name</Label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
@@ -284,7 +284,7 @@ export function Billing() {
                     />
                   </div>
                   <div>
-                    <Label className="text-[#CBD5E1] text-xs font-medium">Customer Phone (optional)</Label>
+                    <Label className="text-muted-foreground text-xs font-medium">Customer Phone (optional)</Label>
                     <Input
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
@@ -293,7 +293,7 @@ export function Billing() {
                     />
                   </div>
                   <div>
-                    <Label className="text-[#CBD5E1] text-xs font-medium">Mobile Name <span className="text-[#EF4444]">*</span></Label>
+                    <Label className="text-muted-foreground text-xs font-medium">Mobile Name <span className="text-[#EF4444]">*</span></Label>
                     <Input
                       value={mobileName}
                       onChange={(e) => setMobileName(e.target.value)}
@@ -312,22 +312,22 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#3B82F6]/30 bg-[#111827]">
+            <div className="overflow-hidden rounded-xl border border-[#3B82F6]/30 bg-card">
               <div className="h-1 bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-6 w-6 rounded-md bg-[#3B82F6]/20 flex items-center justify-center">
                     <span className="text-[#3B82F6] text-xs font-bold">S</span>
                   </div>
-                  <h3 className="text-white text-sm font-semibold">Service Catalog</h3>
+                  <h3 className="text-foreground text-sm font-semibold">Service Catalog</h3>
                 </div>
                 <Select onValueChange={addServiceItem}>
-                  <SelectTrigger className="w-full bg-[#0F172A] border-[#334155] text-white focus:border-[#7C3AED]">
+                  <SelectTrigger className="w-full bg-background border-border text-foreground focus:border-[#7C3AED]">
                     <SelectValue placeholder="Select a service to add..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#111827] border-[#334155]">
+                  <SelectContent className="bg-card border-border">
                     {SERVICE_CATALOG.map((service) => (
-                      <SelectItem key={service} value={service} className="text-white focus:bg-[#7C3AED]/20 focus:text-white">
+                      <SelectItem key={service} value={service} className="text-foreground focus:bg-[#7C3AED]/20 focus:text-foreground">
                         {service}
                       </SelectItem>
                     ))}
@@ -337,7 +337,7 @@ export function Billing() {
                   variant="outline"
                   size="sm"
                   onClick={addCustomItem}
-                  className="mt-2 w-full border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-white gap-1"
+                  className="mt-2 w-full border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-foreground gap-1"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add Custom Item
                 </Button>
@@ -351,14 +351,14 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.1 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#F59E0B]/30 bg-[#111827]">
+            <div className="overflow-hidden rounded-xl border border-[#F59E0B]/30 bg-card">
               <div className="h-1 bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]" />
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-6 w-6 rounded-md bg-[#F59E0B]/20 flex items-center justify-center">
                     <span className="text-[#F59E0B] text-xs font-bold">{items.length}</span>
                   </div>
-                  <h3 className="text-white text-sm font-semibold">Line Items</h3>
+                  <h3 className="text-foreground text-sm font-semibold">Line Items</h3>
                 </div>
                 <div className="space-y-3">
                   <AnimatePresence>
@@ -368,7 +368,7 @@ export function Billing() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-[#0F172A] rounded-lg p-3 border border-[#334155] space-y-2"
+                        className="bg-background rounded-lg p-3 border border-border space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -377,7 +377,7 @@ export function Billing() {
                               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA]">Custom</span>
                             )}
                             {item.description && (
-                              <span className="text-xs text-[#CBD5E1] truncate max-w-[140px]">{item.description}</span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[140px]">{item.description}</span>
                             )}
                           </div>
                           <Button
@@ -390,18 +390,18 @@ export function Billing() {
                           </Button>
                         </div>
                         <div>
-                          <Label className="text-[#94A3B8] text-[10px] font-medium">Description</Label>
+                          <Label className="text-muted-foreground text-[10px] font-medium">Description</Label>
                           <Input
                             value={item.description}
                             onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                             placeholder="Service description"
                             readOnly={!item.isCustom}
-                            className={`${smallInputClass} disabled:opacity-80 disabled:text-[#CBD5E1]`}
+                            className={`${smallInputClass} disabled:opacity-80 disabled:text-muted-foreground`}
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <Label className="text-[#94A3B8] text-[10px] font-medium">Cost Price</Label>
+                            <Label className="text-muted-foreground text-[10px] font-medium">Cost Price</Label>
                             <Input
                               type="number"
                               value={item.costPrice || ''}
@@ -411,7 +411,7 @@ export function Billing() {
                             />
                           </div>
                           <div>
-                            <Label className="text-[#94A3B8] text-[10px] font-medium">Selling Price <span className="text-[#EF4444]">*</span></Label>
+                            <Label className="text-muted-foreground text-[10px] font-medium">Selling Price <span className="text-[#EF4444]">*</span></Label>
                             <Input
                               type="number"
                               value={item.sellingPrice || ''}
@@ -425,7 +425,7 @@ export function Billing() {
                     ))}
                   </AnimatePresence>
                   {items.length === 0 && (
-                    <p className="text-[#64748B] text-xs text-center py-4">
+                    <p className="text-muted-foreground text-xs text-center py-4">
                       No items added. Select a service or add a custom item.
                     </p>
                   )}
@@ -440,22 +440,22 @@ export function Billing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.15 }}
           >
-            <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-[#111827]">
+            <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-card">
               <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-6 w-6 rounded-md bg-[#10B981]/20 flex items-center justify-center">
                     <span className="text-[#10B981] text-xs font-bold">₹</span>
                   </div>
-                  <h3 className="text-white text-sm font-semibold">Financial Summary</h3>
+                  <h3 className="text-foreground text-sm font-semibold">Financial Summary</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#94A3B8]">Subtotal</span>
-                    <span className="text-white font-semibold">{formatCurrency(subtotal)}</span>
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-foreground font-semibold">{formatCurrency(subtotal)}</span>
                   </div>
                   <div>
-                    <Label className="text-[#CBD5E1] text-xs font-medium">Discount</Label>
+                    <Label className="text-muted-foreground text-xs font-medium">Discount</Label>
                     <Input
                       type="number"
                       value={discount || ''}
@@ -464,13 +464,13 @@ export function Billing() {
                       className={inputClass}
                     />
                   </div>
-                  <Separator className="bg-[#334155]" />
+                  <Separator className="bg-border" />
                   <div className="flex justify-between items-center">
-                    <span className="text-white font-bold">Grand Total</span>
+                    <span className="text-foreground font-bold">Grand Total</span>
                     <span className="text-2xl font-bold text-[#10B981]">{formatCurrency(grandTotal)}</span>
                   </div>
                   <div>
-                    <Label className="text-[#CBD5E1] text-xs font-medium">Amount Paid</Label>
+                    <Label className="text-muted-foreground text-xs font-medium">Amount Paid</Label>
                     <Input
                       type="number"
                       value={amountPaid || ''}
@@ -498,7 +498,7 @@ export function Billing() {
           <div className="flex gap-3 pb-4">
             <Button
               variant="outline"
-              className="flex-1 border-[#334155] text-[#CBD5E1] hover:bg-[#1E293B] hover:text-white gap-2 h-10"
+              className="flex-1 border-border text-muted-foreground hover:bg-muted hover:text-foreground gap-2 h-10"
               onClick={() => saveInvoice('pending')}
               disabled={saving}
             >
@@ -518,10 +518,10 @@ export function Billing() {
       {/* RIGHT PANEL - Live Invoice Preview (Desktop) */}
       <div className="hidden lg:block">
         <div className="sticky top-20">
-          <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
+          <h3 className="text-foreground text-sm font-semibold mb-3 flex items-center gap-2">
             <Eye className="h-4 w-4 text-[#7C3AED]" /> Live Invoice Preview
           </h3>
-          <div className="bg-[#0B0F19] rounded-xl p-4 border border-[#1E293B] max-h-[calc(100vh-12rem)] overflow-y-auto">
+          <div className="bg-background rounded-xl p-4 border border-border max-h-[calc(100vh-12rem)] overflow-y-auto">
             <InvoicePreview data={invoiceData} />
           </div>
         </div>
@@ -540,9 +540,9 @@ export function Billing() {
 
       {/* Mobile Preview Dialog */}
       <Dialog open={showMobilePreview} onOpenChange={setShowMobilePreview}>
-        <DialogContent className="bg-[#111827] border-[#1E293B] max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
+            <DialogTitle className="text-foreground flex items-center gap-2">
               <Eye className="h-4 w-4 text-[#7C3AED]" /> Invoice Preview
             </DialogTitle>
           </DialogHeader>

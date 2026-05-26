@@ -1,31 +1,24 @@
 ---
 Task ID: 1
-Agent: Main Developer
-Task: Build complete Sri Krishna Mobiles Bill Generator application
+Agent: Main
+Task: Add Pending Bills tab, Login functionality, Hidden credentials management, Dark/Light mode
 
 Work Log:
-- Analyzed PRD requirements and project structure
-- Set up Prisma schema with Invoice, InvoiceItem, Counter models
-- Pushed schema to SQLite database
-- Built WebSocket mini-service on port 3003 for real-time sync
-- Created API routes: /api/invoices (CRUD), /api/dashboard (metrics), /api/analytics (profit reports), /api/settings (backup/restore)
-- Built globals.css with custom dark theme (Deep Slate Blue #0B0F19, Purple #7C3AED, Mint #10B981, Amber #F59E0B)
-- Created useRealtime hook with offline sync resync on reconnection
-- Built Dashboard component with 6 metric cards, pending bills management, recent bills table with eye-icon preview
-- Built Billing component with split-screen layout (service entry left, live invoice preview right)
-- Built InvoicePreview component matching strict PRD template (white bg, Royal Blue header, INVOICE label, items table, financial totals)
-- Built Analytics component with date picker, 4 summary cards, 7-day trend AreaChart
-- Built Settings component with profile, CSV export/import, app info
-- Created main page.tsx with tab navigation (desktop tabs + mobile bottom bar), framer-motion transitions, sticky footer
-- Implemented IndexedDB offline storage with auto-resync on reconnection
-- All lint checks pass cleanly
-- API endpoints tested and verified working
+- Added User and Session models to Prisma schema with user management support
+- Created auth API routes: /api/auth/login, /api/auth/register, /api/auth/session, /api/auth/logout, /api/auth/seed, /api/auth/users
+- Created Login component with setup flow for first-time admin creation
+- Created PendingBills component as a dedicated tab with search, sort, view, finalize, and delete functionality
+- Updated page.tsx with: 5 tabs (Dashboard, Pending Bills, Create Bill, Analytics, Settings), login gate, dark/light mode toggle in header, logout button, pending count badge on Pending Bills tab
+- Updated Settings with: theme toggle (Light/Dark), hidden admin panel (tap version 5 times), user management (create/delete users with admin password verification)
+- Updated globals.css with full light mode CSS variables
+- Updated layout.tsx with ThemeProvider from next-themes
+- Updated all components (Dashboard, Billing, Analytics) to use theme-aware classes (bg-card, text-foreground, bg-background, border-border, text-muted-foreground)
+- Ran lint - all clean
 
 Stage Summary:
-- Complete POS/billing web application built
-- All 5 epics from PRD implemented: Dashboard, Billing Engine, Real-time Sync, Analytics, Settings
-- Dark theme with purple accent applied consistently
-- Mobile-first responsive design with bottom tab bar
-- Offline-first with IndexedDB and automatic resync
-- Sequential invoice IDs (SRI00001, SRI00002, etc.)
-- Invoice download as PNG via html-to-image
+- Login authentication system with cookie-based sessions
+- Pending Bills is now a separate tab beside Dashboard
+- Dark/Light mode toggle available in header and Settings
+- Hidden admin panel accessible by tapping version number 5 times in Settings
+- Admin can create new counter/user accounts with password verification
+- All components now properly support both dark and light themes

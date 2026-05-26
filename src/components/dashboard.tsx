@@ -64,8 +64,8 @@ function MetricCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }
       transition={{ duration: 0.3, delay }}
     >
       <div
-        className="relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group"
-        style={{ borderColor: accentColor, backgroundColor: '#111827' }}
+        className="relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group bg-card"
+        style={{ borderColor: accentColor }}
       >
         {/* Gradient accent at top */}
         <div
@@ -78,7 +78,7 @@ function MetricCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }
               <p className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: accentColor }}>
                 {title}
               </p>
-              <p className="text-2xl font-bold text-white mt-1.5 truncate">{value}</p>
+              <p className="text-2xl font-bold text-foreground mt-1.5 truncate">{value}</p>
             </div>
             <div
               className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
@@ -308,20 +308,20 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* Pending Bills Section - ALWAYS show */}
+      {/* Pending Bills Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.3 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#F59E0B]/40 bg-[#111827]">
+        <div className="overflow-hidden rounded-xl border border-[#F59E0B]/40 bg-card">
           <div className="h-1 bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]" />
           <div className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="h-8 w-8 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center">
                 <AlertCircle className="h-4 w-4 text-[#F59E0B]" />
               </div>
-              <h3 className="text-white font-semibold text-sm">
+              <h3 className="text-foreground font-semibold text-sm">
                 Pending Bills
               </h3>
               <Badge className="bg-[#F59E0B]/20 text-[#F59E0B] border-0 text-xs px-2">
@@ -339,19 +339,19 @@ export function Dashboard() {
                   {pendingList.map((bill: any) => (
                     <div
                       key={bill.id}
-                      className="flex items-center justify-between bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B] hover:border-[#F59E0B]/30 transition-colors"
+                      className="flex items-center justify-between bg-background rounded-lg p-3 border border-border hover:border-[#F59E0B]/30 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white truncate">
+                          <span className="text-sm font-medium text-foreground truncate">
                             {bill.customerName}
                           </span>
-                          <span className="text-xs text-[#94A3B8] truncate">
+                          <span className="text-xs text-muted-foreground truncate">
                             {bill.mobileName}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-[#94A3B8]">
+                          <span className="text-xs text-muted-foreground">
                             {bill.invoiceId}
                           </span>
                           <span className="text-xs text-[#F59E0B] font-semibold">
@@ -403,14 +403,14 @@ export function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.35 }}
       >
-        <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-[#111827]">
+        <div className="overflow-hidden rounded-xl border border-[#10B981]/30 bg-card">
           <div className="h-1 bg-gradient-to-r from-[#10B981] to-[#34D399]" />
           <div className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="h-8 w-8 rounded-lg bg-[#10B981]/20 flex items-center justify-center">
                 <FileText className="h-4 w-4 text-[#10B981]" />
               </div>
-              <h3 className="text-white font-semibold text-sm">
+              <h3 className="text-foreground font-semibold text-sm">
                 Recent Completed Bills
               </h3>
             </div>
@@ -428,19 +428,19 @@ export function Dashboard() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.03 }}
-                      className="flex items-center justify-between bg-[#0B0F19] rounded-lg p-3 border border-[#1E293B] hover:border-[#10B981]/30 transition-colors"
+                      className="flex items-center justify-between bg-background rounded-lg p-3 border border-border hover:border-[#10B981]/30 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white truncate">
+                          <span className="text-sm font-medium text-foreground truncate">
                             {bill.customerName}
                           </span>
-                          <span className="text-xs text-[#94A3B8] truncate">
+                          <span className="text-xs text-muted-foreground truncate">
                             {bill.mobileName}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-[#94A3B8]">
+                          <span className="text-xs text-muted-foreground">
                             {bill.invoiceId} • {bill.date}
                           </span>
                           {bill.paymentStatus === 'Paid' ? (
@@ -455,7 +455,7 @@ export function Dashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-white">
+                        <span className="text-sm font-bold text-foreground">
                           {formatCurrency(bill.grandTotal)}
                         </span>
                         <Button
@@ -478,9 +478,9 @@ export function Dashboard() {
 
       {/* Invoice Preview Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-[#111827] border-[#1E293B] max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">Invoice Preview</DialogTitle>
+            <DialogTitle className="text-foreground">Invoice Preview</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
             <InvoicePreview data={selectedInvoice} showDownload />
@@ -490,15 +490,15 @@ export function Dashboard() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-[#111827] border-[#1E293B] max-w-sm">
+        <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Invoice?</DialogTitle>
+            <DialogTitle className="text-foreground">Delete Invoice?</DialogTitle>
           </DialogHeader>
-          <p className="text-[#94A3B8] text-sm">
+          <p className="text-muted-foreground text-sm">
             This action cannot be undone. The invoice will be permanently deleted.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#1E293B] text-white hover:bg-[#1E293B]">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-border text-foreground hover:bg-muted">
               Cancel
             </Button>
             <Button
