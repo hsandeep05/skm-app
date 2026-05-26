@@ -19,6 +19,8 @@ import {
   EyeOff,
   Monitor,
   AlertTriangle,
+  Database,
+  Navigation,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +37,8 @@ interface SettingsPageProps {
     counterName: string | null
   } | null
   onLogout?: () => void
+  stickyBottomBar?: boolean
+  onStickyBottomBarChange?: (value: boolean) => void
 }
 
 interface UserItem {
@@ -45,7 +49,7 @@ interface UserItem {
   createdAt: string
 }
 
-export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
+export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, onStickyBottomBarChange }: SettingsPageProps) {
   const [exporting, setExporting] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -69,6 +73,12 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
   const [creatingUser, setCreatingUser] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+
+  // Clear data states
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [clearAdminPassword, setClearAdminPassword] = useState('')
+  const [showClearPassword, setShowClearPassword] = useState(false)
+  const [clearingData, setClearingData] = useState(false)
 
   // Hidden tap to reveal admin
   const handleVersionTap = () => {
@@ -161,6 +171,33 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
       toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' })
     }
     setDeleteConfirmId(null)
+  }
+
+  const handleClearAllData = async () => {
+    if (!clearAdminPassword) {
+      toast({ title: 'Password Required', description: 'Enter your admin password to clear all data', variant: 'destructive' })
+      return
+    }
+    setClearingData(true)
+    try {
+      const res = await fetch('/api/clear-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword: clearAdminPassword }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: 'Data Cleared', description: `Deleted ${data.deletedInvoices} invoices. All data reset to zero.` })
+        setShowClearConfirm(false)
+        setClearAdminPassword('')
+      } else {
+        toast({ title: 'Failed', description: data.error, variant: 'destructive' })
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to clear data', variant: 'destructive' })
+    } finally {
+      setClearingData(false)
+    }
   }
 
   const handleExportCSV = async () => {
@@ -314,15 +351,12 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         transition={{ duration: 0.3 }}
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-          {/* Left accent bar */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
-          {/* Radial glow */}
           <div
             className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
             style={{ background: 'radial-gradient(circle, #7C3AED, transparent 70%)' }}
           />
           <div className="p-5 pl-6">
-            {/* Section Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#7C3AED40]">
                 <Mail className="h-5 w-5 text-[#7C3AED]" />
@@ -332,7 +366,6 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                 <p className="text-muted-foreground text-xs mt-0.5">Your account details</p>
               </div>
             </div>
-            {/* User info with avatar */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#7C3AED]/25 to-[#A78BFA]/15 flex items-center justify-center shadow-[0_0_16px_-4px_#7C3AED30]">
@@ -371,15 +404,12 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         transition={{ duration: 0.3, delay: 0.05 }}
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-          {/* Left accent bar */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
-          {/* Radial glow */}
           <div
             className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
             style={{ background: 'radial-gradient(circle, #7C3AED, transparent 70%)' }}
           />
           <div className="p-5 pl-6">
-            {/* Section Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#7C3AED40]">
                 <Monitor className="h-5 w-5 text-[#7C3AED]" />
@@ -419,6 +449,45 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         </div>
       </motion.div>
 
+      {/* Sticky Bottom Bar Toggle - Mobile Only */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.07 }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-[#06B6D4]/25 bg-card hover:-translate-y-0.5 transition-all duration-300 md:hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#06B6D4] to-[#22D3EE]" />
+          <div
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+            style={{ background: 'radial-gradient(circle, #06B6D4, transparent 70%)' }}
+          />
+          <div className="p-5 pl-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#06B6D4]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#06B6D440]">
+                  <Navigation className="h-5 w-5 text-[#06B6D4]" />
+                </div>
+                <div>
+                  <h3 className="text-foreground font-bold text-base">Sticky Bottom Bar</h3>
+                  <p className="text-muted-foreground text-xs mt-0.5">Keep navigation bar visible while scrolling</p>
+                </div>
+              </div>
+              <Button
+                variant={stickyBottomBar ? 'default' : 'outline'}
+                className={`gap-2 h-9 transition-all duration-300 ${
+                  stickyBottomBar
+                    ? 'bg-[#06B6D4] hover:bg-[#0891B2] text-white shadow-[0_0_12px_-4px_#06B6D440]'
+                    : 'border-border text-foreground hover:bg-muted'
+                }`}
+                onClick={() => onStickyBottomBarChange?.(!stickyBottomBar)}
+              >
+                {stickyBottomBar ? 'On' : 'Off'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Backup & Sync Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -426,15 +495,12 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         transition={{ duration: 0.3, delay: 0.1 }}
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#10B981]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-          {/* Left accent bar */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
-          {/* Radial glow */}
           <div
             className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
             style={{ background: 'radial-gradient(circle, #10B981, transparent 70%)' }}
           />
           <div className="p-5 pl-6">
-            {/* Section Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#10B98140]">
                 <Download className="h-5 w-5 text-[#10B981]" />
@@ -479,6 +545,103 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         </div>
       </motion.div>
 
+      {/* Clear All Data Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.15 }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF4444] to-[#F87171]" />
+          <div
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+            style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
+          />
+          <div className="p-5 pl-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#EF4444]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#EF444440]">
+                <Database className="h-5 w-5 text-[#EF4444]" />
+              </div>
+              <div>
+                <h3 className="text-foreground font-bold text-base">Clear All Data</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Reset all invoices and amounts to zero</p>
+              </div>
+            </div>
+
+            {!showClearConfirm ? (
+              <Button
+                variant="outline"
+                className="w-full h-11 border-[#EF4444]/40 text-[#F87171] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/60 hover:text-foreground gap-2.5 transition-all duration-200 shadow-sm"
+                onClick={() => setShowClearConfirm(true)}
+              >
+                <Trash2 className="h-4.5 w-4.5" /> Clear All Invoice Data
+              </Button>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-background rounded-xl p-4 border border-[#EF4444]/20 space-y-3 shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-[#EF4444]">
+                  <AlertTriangle className="h-5 w-5" />
+                  <p className="text-sm font-bold">This will permanently delete ALL invoice data!</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This action cannot be undone. All invoices, items, and counters will be deleted. Please backup first if needed.
+                </p>
+                <div>
+                  <Label className="text-destructive text-[10px] font-medium flex items-center gap-1">
+                    <Shield className="h-3 w-3" /> Admin Password (required)
+                  </Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={showClearPassword ? 'text' : 'password'}
+                      value={clearAdminPassword}
+                      onChange={(e) => setClearAdminPassword(e.target.value)}
+                      placeholder="Enter your admin password"
+                      className="bg-card border-border text-foreground placeholder:text-muted-foreground/60 h-9 text-sm pr-10 focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20 transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowClearPassword(!showClearPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showClearPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-border text-foreground hover:bg-muted gap-1 text-sm h-9"
+                    onClick={() => {
+                      setShowClearConfirm(false)
+                      setClearAdminPassword('')
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1 gap-1 text-sm h-9"
+                    disabled={clearingData || !clearAdminPassword}
+                    onClick={handleClearAllData}
+                  >
+                    {clearingData ? (
+                      <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    {clearingData ? 'Clearing...' : 'Clear All Data'}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
       {/* Hidden Admin Panel - User Management */}
       <AnimatePresence>
         {showAdmin && currentUser?.role === 'admin' && (
@@ -489,9 +652,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
             transition={{ duration: 0.3 }}
           >
             <div className="relative overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-              {/* Left accent bar */}
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF4444] to-[#F87171]" />
-              {/* Red secret glow */}
               <div
                 className="absolute -top-16 -right-16 w-44 h-44 rounded-full opacity-[0.08] dark:opacity-[0.12] pointer-events-none blur-2xl"
                 style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
@@ -501,7 +662,6 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                 style={{ background: 'radial-gradient(circle, #EF4444, transparent 70%)' }}
               />
               <div className="p-5 pl-6">
-                {/* Section Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-[#EF4444]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#EF444440]">
@@ -509,7 +669,7 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
                     </div>
                     <div>
                       <h3 className="text-foreground font-bold text-base">User Management</h3>
-                      <p className="text-[#EF4444]/70 text-xs mt-0.5 font-medium">Admin only • Restricted access</p>
+                      <p className="text-[#EF4444]/70 text-xs mt-0.5 font-medium">Admin only • Tap version 5 times to unlock</p>
                     </div>
                   </div>
                   <Button
@@ -731,15 +891,12 @@ export function SettingsPage({ currentUser, onLogout }: SettingsPageProps) {
         transition={{ duration: 0.3, delay: 0.2 }}
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#3B82F6]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
-          {/* Left accent bar */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#3B82F6] to-[#60A5FA]" />
-          {/* Radial glow */}
           <div
             className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
             style={{ background: 'radial-gradient(circle, #3B82F6, transparent 70%)' }}
           />
           <div className="p-5 pl-6">
-            {/* Section Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-xl bg-[#3B82F6]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#3B82F640]">
                 <Info className="h-5 w-5 text-[#3B82F6]" />

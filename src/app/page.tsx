@@ -47,6 +47,7 @@ export default function SriKrishnaApp() {
   const [pendingCount, setPendingCount] = useState(0)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [stickyBottomBar, setStickyBottomBar] = useState(true)
   const { theme, setTheme } = useTheme()
 
   // Check session on mount
@@ -116,7 +117,7 @@ export default function SriKrishnaApp() {
       case 'analytics':
         return <Analytics />
       case 'settings':
-        return <SettingsPage currentUser={user} onLogout={handleLogout} />
+        return <SettingsPage currentUser={user} onLogout={handleLogout} stickyBottomBar={stickyBottomBar} onStickyBottomBarChange={setStickyBottomBar} />
     }
   }
 
@@ -212,7 +213,7 @@ export default function SriKrishnaApp() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 pb-20 md:pb-6">
+      <main className={`flex-1 max-w-7xl mx-auto w-full px-4 py-6 ${stickyBottomBar ? 'pb-20 md:pb-6' : 'pb-6'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -237,7 +238,7 @@ export default function SriKrishnaApp() {
       </footer>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl z-50 safe-area-bottom gradient-border-top">
+      <nav className={`md:hidden ${stickyBottomBar ? 'fixed bottom-0 left-0 right-0 z-50' : 'sticky bottom-0'} bg-card/80 backdrop-blur-xl safe-area-bottom gradient-border-top`}>
         <div className="flex items-center justify-around py-2">
           {tabs.map((tab) => (
             <button

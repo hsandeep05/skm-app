@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Save, Send, Eye } from 'lucide-react'
+import { Plus, Trash2, Save, Send, Eye, EyeOff } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,6 +71,7 @@ export function Billing() {
   const [discount, setDiscount] = useState(0)
   const [amountPaid, setAmountPaid] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [visibleCostPrices, setVisibleCostPrices] = useState<Set<string>>(new Set())
   const [showMobilePreview, setShowMobilePreview] = useState(false)
   const { emitChange } = useRealtime()
   const { toast } = useToast()
@@ -405,13 +406,37 @@ export function Billing() {
                         <div className="grid grid-cols-2 gap-2 bg-muted/30 rounded-lg p-2 -mx-1">
                           <div>
                             <Label className="text-muted-foreground text-[10px] font-medium">Cost Price</Label>
-                            <Input
-                              type="number"
-                              value={item.costPrice || ''}
-                              onChange={(e) => updateItem(item.id, 'costPrice', parseFloat(e.target.value) || 0)}
-                              placeholder="₹0"
-                              className={smallInputClass}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={visibleCostPrices.has(item.id) ? 'number' : 'password'}
+                                value={item.costPrice || ''}
+                                onChange={(e) => updateItem(item.id, 'costPrice', parseFloat(e.target.value) || 0)}
+                                placeholder="₹0"
+                                className={`${smallInputClass} pr-8`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVisibleCostPrices((prev) => {
+                                    const next = new Set(prev)
+                                    if (next.has(item.id)) {
+                                      next.delete(item.id)
+                                    } else {
+                                      next.add(item.id)
+                                    }
+                                    return next
+                                  })
+                                }}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                tabIndex={-1}
+                              >
+                                {visibleCostPrices.has(item.id) ? (
+                                  <EyeOff className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Eye className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                           <div>
                             <Label className="text-muted-foreground text-[10px] font-medium">Selling Price <span className="text-[#EF4444]">*</span></Label>
