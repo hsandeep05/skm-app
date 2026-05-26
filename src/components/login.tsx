@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Receipt, Eye, EyeOff, LogIn, UserPlus, Shield } from 'lucide-react'
+import { Receipt, Eye, EyeOff, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,23 +17,34 @@ export function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [needsSetup, setNeedsSetup] = useState(false)
-  const [setupUsername, setSetupUsername] = useState('')
-  const [setupPassword, setSetupPassword] = useState('')
-  const [setupShowPassword, setSetupShowPassword] = useState(false)
-  const [setupLoading, setSetupLoading] = useState(false)
+  const [seeding, setSeeding] = useState(false)
   const { toast } = useToast()
 
-  // Check if any users exist (if not, show setup screen)
+  // Auto-seed the default user if it doesn't exist
   useEffect(() => {
-    fetch('/api/auth/session')
-      .then(res => res.json())
-      .then(data => {
+    const autoSeed = async () => {
+      setSeeding(true)
+      try {
+        // Try to seed - will only create if no users exist
+        await fetch('/api/auth/seed', { method: 'POST' })
+      } catch (err) {
+        // Ignore errors - seed may already exist
+      } finally {
+        setSeeding(false)
+      }
+
+      // Check if already authenticated
+      try {
+        const res = await fetch('/api/auth/session')
+        const data = await res.json()
         if (data.authenticated) {
           onLogin(data.user)
         }
-      })
-      .catch(() => {})
+      } catch (err) {
+        // Ignore
+      }
+    }
+    autoSeed()
   }, [onLogin])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -59,42 +70,6 @@ export function Login({ onLogin }: LoginProps) {
       toast({ title: 'Error', description: 'Failed to connect to server', variant: 'destructive' })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSetup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSetupLoading(true)
-
-    try {
-      const res = await fetch('/api/auth/seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: setupUsername, password: setupPassword }),
-      })
-
-      const data = await res.json()
-
-      if (res.ok) {
-        // Now auto-login with the new credentials
-        const loginRes = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: setupUsername, password: setupPassword }),
-        })
-
-        const loginData = await loginRes.json()
-        if (loginRes.ok) {
-          onLogin(loginData.user)
-          toast({ title: 'Account Created!', description: 'Welcome to Sri Krishna Mobiles Bill Generator' })
-        }
-      } else {
-        toast({ title: 'Setup Failed', description: data.error, variant: 'destructive' })
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to setup account', variant: 'destructive' })
-    } finally {
-      setSetupLoading(false)
     }
   }
 
@@ -134,87 +109,29 @@ export function Login({ onLogin }: LoginProps) {
           </motion.p>
         </div>
 
-        {/* Setup Form (First time) */}
-        {needsSetup ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-2xl shadow-black/10 ring-1 ring-white/[0.03]"
-          >
-            <div className="flex items-center gap-2 mb-5">
-              <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center ring-1 ring-[#7C3AED]/10">
-                <Shield className="h-4 w-4 text-[#7C3AED]" />
-              </div>
-              <div>
-                <h2 className="text-foreground font-semibold text-sm">Initial Setup</h2>
-                <p className="text-muted-foreground text-xs">Create your admin account</p>
-              </div>
+        {/* Login Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-2xl shadow-black/10 ring-1 ring-white/[0.03]"
+        >
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center ring-1 ring-[#7C3AED]/10">
+              <LogIn className="h-4 w-4 text-[#7C3AED]" />
             </div>
-
-            <form onSubmit={handleSetup} className="space-y-4">
-              <div>
-                <Label className="text-muted-foreground text-xs font-medium">Admin Username</Label>
-                <Input
-                  value={setupUsername}
-                  onChange={(e) => setSetupUsername(e.target.value)}
-                  placeholder="e.g., admin"
-                  required
-                  className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 transition-all duration-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-xs font-medium">Admin Password</Label>
-                <div className="relative">
-                  <Input
-                    type={setupShowPassword ? 'text' : 'password'}
-                    value={setupPassword}
-                    onChange={(e) => setSetupPassword(e.target.value)}
-                    placeholder="Create a strong password"
-                    required
-                    className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 pr-10 transition-all duration-200 rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setSetupShowPassword(!setupShowPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {setupShowPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25 transition-all duration-200 hover:shadow-xl hover:shadow-[#7C3AED]/30"
-                disabled={setupLoading}
-              >
-                {setupLoading ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                ) : (
-                  <UserPlus className="h-4 w-4" />
-                )}
-                {setupLoading ? 'Creating...' : 'Create Admin Account'}
-              </Button>
-            </form>
-          </motion.div>
-        ) : (
-          /* Login Form */
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-2xl shadow-black/10 ring-1 ring-white/[0.03]"
-          >
-            <div className="flex items-center gap-2 mb-5">
-              <div className="h-8 w-8 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center ring-1 ring-[#7C3AED]/10">
-                <LogIn className="h-4 w-4 text-[#7C3AED]" />
-              </div>
-              <div>
-                <h2 className="text-foreground font-semibold text-sm">Sign In</h2>
-                <p className="text-muted-foreground text-xs">Enter your credentials to continue</p>
-              </div>
+            <div>
+              <h2 className="text-foreground font-semibold text-sm">Sign In</h2>
+              <p className="text-muted-foreground text-xs">Enter your credentials to continue</p>
             </div>
+          </div>
 
+          {seeding ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-6 w-6 border-2 border-[#7C3AED] border-t-transparent rounded-full" />
+              <span className="ml-3 text-sm text-muted-foreground">Initializing...</span>
+            </div>
+          ) : (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <Label className="text-muted-foreground text-xs font-medium">Username</Label>
@@ -260,20 +177,8 @@ export function Login({ onLogin }: LoginProps) {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-
-            <div className="mt-4 pt-4 border-t border-border/50">
-              <p className="text-center text-xs text-muted-foreground">
-                First time?{' '}
-                <button
-                  onClick={() => setNeedsSetup(true)}
-                  className="text-[#7C3AED] hover:text-[#A78BFA] font-medium transition-colors"
-                >
-                  Create admin account
-                </button>
-              </p>
-            </div>
-          </motion.div>
-        )}
+          )}
+        </motion.div>
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
