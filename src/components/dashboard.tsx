@@ -13,12 +13,9 @@ import {
   WifiOff,
   Receipt,
   AlertCircle,
-  Trash2,
-  Send,
   CalendarDays,
   FileText,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -27,11 +24,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 import { useRealtime } from '@/hooks/use-realtime'
-import { useToast } from '@/hooks/use-toast'
 
 interface DashboardData {
   todaySales: number
@@ -158,10 +153,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
   const { isConnected, lastEvent, requestRefresh } = useRealtime()
-  const { toast } = useToast()
 
   // Load shop logo
   useEffect(() => {
@@ -237,41 +230,6 @@ export function Dashboard() {
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)
-  }
-
-  const handleFinalize = async (id: string) => {
-    try {
-      const res = await fetch(`/api/invoices/${id}`)
-      if (!res.ok) throw new Error('Failed to fetch invoice')
-      const { invoice } = await res.json()
-
-      const updateRes = await fetch(`/api/invoices/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...invoice, status: 'completed' }),
-      })
-      if (updateRes.ok) {
-        toast({ title: 'Bill Finalized', description: `Invoice ${invoice.invoiceId} has been finalized` })
-        fetchDashboard()
-        fetchPendingBills()
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to finalize bill', variant: 'destructive' })
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/invoices/${id}`, { method: 'DELETE' })
-      if (res.ok) {
-        toast({ title: 'Deleted', description: 'Invoice deleted successfully' })
-        fetchDashboard()
-        fetchPendingBills()
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to delete invoice', variant: 'destructive' })
-    }
-    setDeleteConfirm(null)
   }
 
   if (loading) {
@@ -425,52 +383,43 @@ export function Dashboard() {
                   {pendingList.map((bill: any) => (
                     <div
                       key={bill.id}
-                      className="flex items-center justify-between bg-background rounded-xl p-3.5 border border-border
-                                  hover:border-[#F59E0B]/30 transition-all duration-200 group"
+                      className="bg-background rounded-xl p-3 border border-border
+                                  hover:border-[#F59E0B]/30 transition-all duration-200"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground truncate">
-                            {bill.customerName}
-                          </span>
-                          <span className="text-xs text-muted-foreground truncate">
-                            {bill.mobileName}
-                          </span>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {bill.customerName}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {bill.mobileName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Receipt className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {bill.invoiceId}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Receipt className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {bill.invoiceId}
-                          </span>
-                          <span className="text-xs text-[#F59E0B] font-bold">
-                            {formatCurrency(bill.grandTotal)}
-                          </span>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-[#F59E0B]">{formatCurrency(bill.grandTotal)}</p>
+                          {bill.balanceDue > 0 && (
+                            <p className="text-[10px] text-[#F59E0B]/70 font-medium">
+                              Due: {formatCurrency(bill.balanceDue)}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/10"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs border-border/60 text-muted-foreground hover:text-[#7C3AED] hover:border-[#7C3AED]/30 hover:bg-[#7C3AED]/5 flex-1 sm:flex-none"
                           onClick={() => handleViewInvoice(bill)}
                         >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-[#10B981] hover:bg-[#10B981]/10"
-                          onClick={() => handleFinalize(bill.id)}
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-400 hover:bg-red-400/10"
-                          onClick={() => setDeleteConfirm(bill.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                          <Eye className="h-3 w-3" /> View
                         </Button>
                       </div>
                     </div>
@@ -594,28 +543,6 @@ export function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-card border-border max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Delete Invoice?</DialogTitle>
-          </DialogHeader>
-          <p className="text-muted-foreground text-sm">
-            This action cannot be undone. The invoice will be permanently deleted.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-border text-foreground hover:bg-muted">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
