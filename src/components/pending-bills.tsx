@@ -79,17 +79,22 @@ export function PendingBills() {
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
+  const [shopInfo, setShopInfo] = useState<{ shopName: string; shopAddress: string; shopTagline: string }>({ shopName: '', shopAddress: '', shopTagline: '' })
   const [recoverBill, setRecoverBill] = useState<PendingBill | null>(null)
   const [recoverAmount, setRecoverAmount] = useState('')
   const [recovering, setRecovering] = useState(false)
   const { lastEvent } = useRealtime()
   const { toast } = useToast()
 
-  // Load shop logo
+  // Load shop logo & settings
   useEffect(() => {
     fetch('/api/logo')
       .then(res => res.json())
       .then(d => { if (d.logo) setShopLogo(d.logo) })
+      .catch(() => {})
+    fetch('/api/shop-settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(d => { if (d) setShopInfo({ shopName: d.shopName || '', shopAddress: d.shopAddress || '', shopTagline: d.shopTagline || '' }) })
       .catch(() => {})
   }, [])
 
@@ -164,6 +169,9 @@ export function PendingBills() {
       amountPaid: bill.amountPaid,
       balanceDue: bill.balanceDue,
       shopLogo,
+      shopName: shopInfo.shopName || undefined,
+      shopAddress: shopInfo.shopAddress || undefined,
+      shopTagline: shopInfo.shopTagline || undefined,
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)

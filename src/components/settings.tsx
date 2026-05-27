@@ -20,7 +20,7 @@ import {
   Monitor,
   AlertTriangle,
   Database,
-  Navigation,
+  Receipt,
   Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -38,9 +38,8 @@ interface SettingsPageProps {
     counterName: string | null
   } | null
   onLogout?: () => void
-  stickyBottomBar?: boolean
-  onStickyBottomBarChange?: (value: boolean) => void
   onLogoChange?: (logo: string | null) => void
+  onShopSettingsChange?: (settings: { shopName: string; shopAddress: string; shopTagline: string }) => void
 }
 
 interface UserItem {
@@ -51,7 +50,7 @@ interface UserItem {
   createdAt: string
 }
 
-export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, onStickyBottomBarChange, onLogoChange }: SettingsPageProps) {
+export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettingsChange }: SettingsPageProps) {
   const [exporting, setExporting] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -87,6 +86,12 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
   const [shopLogo, setShopLogo] = useState<string | null>(null)
   const [savingLogo, setSavingLogo] = useState(false)
 
+  // Shop info states
+  const [shopName, setShopName] = useState('SRI Krishna Mobiles')
+  const [shopAddress, setShopAddress] = useState('Near Chowk bazar, MainRoad, Narayanpet')
+  const [shopTagline, setShopTagline] = useState('Your Trusted Mobile Service Center')
+  const [savingShopInfo, setSavingShopInfo] = useState(false)
+
   // Load logo on mount
   useEffect(() => {
     fetch('/api/logo')
@@ -99,6 +104,20 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
       })
       .catch(() => {})
   }, [onLogoChange])
+
+  // Load shop settings on mount
+  useEffect(() => {
+    fetch('/api/shop-settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          setShopName(data.shopName || 'SRI Krishna Mobiles')
+          setShopAddress(data.shopAddress || 'Near Chowk bazar, MainRoad, Narayanpet')
+          setShopTagline(data.shopTagline || 'Your Trusted Mobile Service Center')
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Hidden tap to reveal admin
   const handleVersionTap = () => {
@@ -272,6 +291,27 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
       toast({ title: 'Logo Removed', description: 'Shop logo has been removed from invoices' })
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to remove logo', variant: 'destructive' })
+    }
+  }
+
+  const handleSaveShopInfo = async () => {
+    setSavingShopInfo(true)
+    try {
+      const res = await fetch('/api/shop-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopName, shopAddress, shopTagline }),
+      })
+      if (res.ok) {
+        onShopSettingsChange?.({ shopName, shopAddress, shopTagline })
+        toast({ title: 'Shop Info Updated', description: 'Store name and address will appear on new invoices' })
+      } else {
+        toast({ title: 'Failed', description: 'Could not save shop info', variant: 'destructive' })
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to save shop info', variant: 'destructive' })
+    } finally {
+      setSavingShopInfo(false)
     }
   }
 
@@ -524,39 +564,65 @@ export function SettingsPage({ currentUser, onLogout, stickyBottomBar = true, on
         </div>
       </motion.div>
 
-      {/* Sticky Bottom Bar Toggle - Mobile Only */}
+      {/* Edit Store Info (Bill Preview) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.07 }}
       >
-        <div className="relative overflow-hidden rounded-2xl border border-[#06B6D4]/25 bg-card hover:-translate-y-0.5 transition-all duration-300 md:hidden">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#06B6D4] to-[#22D3EE]" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#3B82F6]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#3B82F6] to-[#60A5FA]" />
           <div
             className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
-            style={{ background: 'radial-gradient(circle, #06B6D4, transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, #3B82F6, transparent 70%)' }}
           />
           <div className="p-5 pl-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#06B6D4]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#06B6D440]">
-                  <Navigation className="h-5 w-5 text-[#06B6D4]" />
-                </div>
-                <div>
-                  <h3 className="text-foreground font-bold text-base">Sticky Bottom Bar</h3>
-                  <p className="text-muted-foreground text-xs mt-0.5">Keep navigation bar visible while scrolling</p>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-[#3B82F6]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#3B82F640]">
+                <Receipt className="h-5 w-5 text-[#3B82F6]" />
+              </div>
+              <div>
+                <h3 className="text-foreground font-bold text-base">Store Information</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Appears on bill preview header</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-muted-foreground text-xs font-medium">Store Name</Label>
+                <Input
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="e.g., SRI Krishna Mobiles"
+                  className="bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#3B82F6]/30 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 transition-all duration-200 h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs font-medium">Store Address</Label>
+                <Input
+                  value={shopAddress}
+                  onChange={(e) => setShopAddress(e.target.value)}
+                  placeholder="e.g., Near Chowk bazar, MainRoad, Narayanpet"
+                  className="bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#3B82F6]/30 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 transition-all duration-200 h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs font-medium">Tagline</Label>
+                <Input
+                  value={shopTagline}
+                  onChange={(e) => setShopTagline(e.target.value)}
+                  placeholder="e.g., Your Trusted Mobile Service Center"
+                  className="bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#3B82F6]/30 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 transition-all duration-200 h-9"
+                />
               </div>
               <Button
-                variant={stickyBottomBar ? 'default' : 'outline'}
-                className={`gap-2 h-9 transition-all duration-300 ${
-                  stickyBottomBar
-                    ? 'bg-[#06B6D4] hover:bg-[#0891B2] text-white shadow-[0_0_12px_-4px_#06B6D440]'
-                    : 'border-border text-foreground hover:bg-muted'
-                }`}
-                onClick={() => onStickyBottomBarChange?.(!stickyBottomBar)}
+                className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white gap-2 h-10 shadow-lg shadow-[#3B82F6]/25 hover:shadow-xl hover:shadow-[#3B82F6]/30 transition-all duration-200"
+                onClick={handleSaveShopInfo}
+                disabled={savingShopInfo}
               >
-                {stickyBottomBar ? 'On' : 'Off'}
+                {savingShopInfo ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                ) : null}
+                {savingShopInfo ? 'Saving...' : 'Save Store Info'}
               </Button>
             </div>
           </div>

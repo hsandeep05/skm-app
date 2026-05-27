@@ -64,7 +64,7 @@ function formatCurrency(amount: number): string {
 const inputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 h-9"
 const smallInputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 text-sm h-8"
 
-export function Billing({ shopLogo }: { shopLogo?: string | null }) {
+export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; shopSettings?: { shopName: string; shopAddress: string; shopTagline: string } }) {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [mobileName, setMobileName] = useState('')
@@ -134,7 +134,10 @@ export function Billing({ shopLogo }: { shopLogo?: string | null }) {
     amountPaid,
     balanceDue,
     shopLogo,
-  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo])
+    shopName: shopSettings?.shopName,
+    shopAddress: shopSettings?.shopAddress,
+    shopTagline: shopSettings?.shopTagline,
+  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo, shopSettings])
 
   const resetForm = useCallback(() => {
     setCustomerName('')
