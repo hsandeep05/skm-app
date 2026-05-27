@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock,
   Eye,
-  Send,
-  Trash2,
   AlertCircle,
   RefreshCw,
   Search,
@@ -80,8 +78,6 @@ export function PendingBills() {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'name'>('date')
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [finalizingId, setFinalizingId] = useState<string | null>(null)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
   const [recoverBill, setRecoverBill] = useState<PendingBill | null>(null)
   const [recoverAmount, setRecoverAmount] = useState('')
@@ -171,42 +167,6 @@ export function PendingBills() {
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)
-  }
-
-  const handleFinalize = async (id: string) => {
-    setFinalizingId(id)
-    try {
-      const res = await fetch(`/api/invoices/${id}`)
-      if (!res.ok) throw new Error('Failed to fetch invoice')
-      const { invoice } = await res.json()
-
-      const updateRes = await fetch(`/api/invoices/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...invoice, status: 'completed' }),
-      })
-      if (updateRes.ok) {
-        toast({ title: 'Bill Finalized', description: `Invoice ${invoice.invoiceId} has been finalized` })
-        fetchPendingBills()
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to finalize bill', variant: 'destructive' })
-    } finally {
-      setFinalizingId(null)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/invoices/${id}`, { method: 'DELETE' })
-      if (res.ok) {
-        toast({ title: 'Deleted', description: 'Invoice deleted successfully' })
-        fetchPendingBills()
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to delete invoice', variant: 'destructive' })
-    }
-    setDeleteConfirm(null)
   }
 
   const handleRecoverPayment = async () => {
@@ -424,71 +384,37 @@ export function PendingBills() {
                     {/* Dot pattern overlay */}
                     <div className="absolute inset-0 rounded-xl opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, currentColor 0.5px, transparent 0.5px)', backgroundSize: '12px 12px' }} />
 
-                    <div className="relative flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-foreground font-bold text-sm truncate">
-                            {bill.customerName}
-                          </span>
-                          <Badge className="bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 text-[10px] h-5 px-2.5 font-semibold rounded-full">
-                            Pending
-                          </Badge>
-                          {bill.paymentStatus === 'Partial' && (
-                            <Badge className="bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 text-[10px] h-5 px-2.5 font-semibold rounded-full">
-                              Partial
+                    <div className="relative">
+                      {/* Top Row: Customer info + Amount */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-foreground font-bold text-sm truncate">
+                              {bill.customerName}
+                            </span>
+                            <Badge className="bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 text-[10px] h-5 px-2 font-semibold rounded-full">
+                              Pending
                             </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
-                            <AlertCircle className="h-3 w-3" />
-                            {bill.invoiceId}
-                          </span>
-                          <span className="text-xs text-muted-foreground font-medium">
-                            {bill.mobileName}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(bill.date)}
-                          </span>
-                        </div>
-                        {bill.items && bill.items.length > 0 && (
-                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                            {bill.items.slice(0, 3).map((item, i) => (
-                              <span key={i} className="text-[10px] bg-background/80 text-muted-foreground px-2 py-0.5 rounded-full border border-border/50 font-medium">
-                                {item.description}
-                              </span>
-                            ))}
-                            {bill.items.length > 3 && (
-                              <span className="text-[10px] text-muted-foreground font-medium px-1.5">
-                                +{bill.items.length - 3} more
-                              </span>
+                            {bill.paymentStatus === 'Partial' && (
+                              <Badge className="bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 text-[10px] h-5 px-2 font-semibold rounded-full">
+                                Partial
+                              </Badge>
                             )}
                           </div>
-                        )}
-                        {/* Partial payment progress indicator */}
-                        {bill.paymentStatus === 'Partial' && bill.amountPaid > 0 && (
-                          <div className="mt-2.5">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] font-semibold text-[#F59E0B]">
-                                {formatCurrency(bill.amountPaid)} of {formatCurrency(bill.grandTotal)} paid
-                              </span>
-                              <span className="text-[10px] font-bold text-[#F59E0B]">
-                                {Math.round(paymentProgress)}%
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full rounded-full bg-[#F59E0B]/10 overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${paymentProgress}%` }}
-                                transition={{ duration: 0.6, ease: 'easeOut' }}
-                                className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/70"
-                              />
-                            </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
+                              <AlertCircle className="h-3 w-3" />
+                              {bill.invoiceId}
+                            </span>
+                            <span className="text-xs text-muted-foreground font-medium">
+                              {bill.mobileName}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(bill.date)}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <div className="text-right">
+                        </div>
+                        <div className="text-right flex-shrink-0">
                           <p className="text-sm font-bold text-foreground">{formatCurrency(bill.grandTotal)}</p>
                           {bill.balanceDue > 0 && (
                             <p className="text-xs text-[#F59E0B] font-semibold">
@@ -496,45 +422,64 @@ export function PendingBills() {
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-[#7C3AED] hover:bg-[#7C3AED]/15 hover:text-[#7C3AED] rounded-lg transition-colors"
-                            onClick={() => handleViewInvoice(bill)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-[#F59E0B] hover:bg-[#F59E0B]/15 hover:text-[#F59E0B] rounded-lg transition-colors"
-                            onClick={() => openRecoverDialog(bill)}
-                          >
-                            <IndianRupee className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-[#10B981] hover:bg-[#10B981]/15 hover:text-[#10B981] rounded-lg transition-colors"
-                            onClick={() => handleFinalize(bill.id)}
-                            disabled={finalizingId === bill.id}
-                          >
-                            {finalizingId === bill.id ? (
-                              <div className="animate-spin h-4 w-4 border-2 border-[#10B981] border-t-transparent rounded-full" />
-                            ) : (
-                              <Send className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive/70 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
-                            onClick={() => setDeleteConfirm(bill.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      </div>
+
+                      {/* Items Row */}
+                      {bill.items && bill.items.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          {bill.items.slice(0, 3).map((item, i) => (
+                            <span key={i} className="text-[10px] bg-background/80 text-muted-foreground px-2 py-0.5 rounded-full border border-border/50 font-medium">
+                              {item.description}
+                            </span>
+                          ))}
+                          {bill.items.length > 3 && (
+                            <span className="text-[10px] text-muted-foreground font-medium px-1.5">
+                              +{bill.items.length - 3} more
+                            </span>
+                          )}
                         </div>
+                      )}
+
+                      {/* Partial payment progress indicator */}
+                      {bill.paymentStatus === 'Partial' && bill.amountPaid > 0 && (
+                        <div className="mt-2.5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-semibold text-[#F59E0B]">
+                              {formatCurrency(bill.amountPaid)} of {formatCurrency(bill.grandTotal)} paid
+                            </span>
+                            <span className="text-[10px] font-bold text-[#F59E0B]">
+                              {Math.round(paymentProgress)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-[#F59E0B]/10 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${paymentProgress}%` }}
+                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                              className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/70"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons Row */}
+                      <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/40">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs border-border/60 text-muted-foreground hover:text-[#7C3AED] hover:border-[#7C3AED]/30 hover:bg-[#7C3AED]/5 flex-1 sm:flex-none"
+                          onClick={() => handleViewInvoice(bill)}
+                        >
+                          <Eye className="h-3.5 w-3.5" /> View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs border-[#F59E0B]/30 text-[#F59E0B] hover:bg-[#F59E0B]/10 hover:border-[#F59E0B]/50 flex-1 sm:flex-none"
+                          onClick={() => openRecoverDialog(bill)}
+                        >
+                          <IndianRupee className="h-3.5 w-3.5" /> Recover
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -554,30 +499,6 @@ export function PendingBills() {
           {selectedInvoice && (
             <InvoicePreview data={selectedInvoice} showDownload />
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-card border-border/80 max-w-sm shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-foreground font-bold">Delete Invoice?</DialogTitle>
-          </DialogHeader>
-          <p className="text-muted-foreground text-sm">
-            This action cannot be undone. The invoice will be permanently deleted.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-border text-foreground hover:bg-muted">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-              className="hover:shadow-md hover:shadow-destructive/20 transition-shadow"
-            >
-              Delete
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
