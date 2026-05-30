@@ -152,3 +152,58 @@ Stage Summary:
 - Invoice API now supports custom date from billing form
 - Native browser tooltips removed from header buttons (fixing "notification in floating bar")
 - All changes verified: billing date picker, total paid checkbox, mobile preview, auto-save pending, payment recovery, analytics completed bills, responsive amounts
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Fix data persistence issue - entries and users being cleared after 1-2 days
+
+Problem Diagnosed:
+- The SQLite database file (`db/custom.db`) lives inside the project directory
+- When the sandbox/environment rebuilds, the database gets replaced with a stale build-time snapshot
+- All data (invoices, users, settings) is lost on every rebuild/restart
+- New users (counters) also get wiped because they're stored in the same database
+
+Solution Implemented:
+- Created `/src/lib/data-persistence.ts` - Client-side data persistence layer
+  - Auto-backup: Fetches all data from server API, saves snapshot to localStorage
+  - Auto-restore: When server data is missing/empty, restores from localStorage backup
+  - Smart sync: Compares server vs local data, restores missing data automatically
+  - Handles localStorage quota exceeded errors gracefully
+
+- Created `/src/app/api/backup/route.ts` - Full database backup endpoint
+  - GET endpoint exports ALL data: invoices, invoice items, users, counters, settings
+  - Returns complete JSON snapshot for localStorage storage
+
+- Created `/src/app/api/restore/route.ts` - Full database restore endpoint
+  - POST endpoint imports ALL data from a backup snapshot
+  - Upserts settings, counters, users (preserves existing data, adds missing)
+  - Creates invoices with their items (skips duplicates by invoiceId)
+  - Returns counts of restored items
+
+- Modified `/src/app/page.tsx`:
+  - Added auto-backup every 5 minutes when logged in
+  - Added smart sync on app startup (detects data loss and auto-restores)
+  - Added debounced triggerAutoBackup function
+  - Added data recovery notification banner (green "Data Recovered!" toast)
+  - Added Database icon import for notification
+
+- Added auto-backup triggers after every data-changing operation:
+  - `/src/components/billing.tsx` - After creating invoice (online & offline)
+  - `/src/components/pending-bills.tsx` - After payment recovery
+  - `/src/components/settings.tsx` - After: creating user, deleting user, saving shop info, uploading logo, removing logo, clearing data, CSV restore
+  - `/src/components/login.tsx` - After successful login
+
+- Added DataProtectionStatus component in Settings:
+  - Shows last backup time with relative formatting (e.g., "5 min ago")
+  - Green "Protected" / Amber "Needs Backup" status indicator
+  - "Backup Now" button for manual backup
+  - Explains auto-backup behavior to the user
+
+Stage Summary:
+- Data now persists in browser localStorage as a safety net
+- Auto-backup runs every 5 minutes + after every operation
+- Auto-restore detects data loss and recovers automatically on login
+- Users will see a green "Data Recovered!" notification if restore happens
+- Settings shows backup status with manual backup option
+- All lint checks pass, all API endpoints verified working

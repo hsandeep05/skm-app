@@ -26,6 +26,7 @@ import {
 import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 import { useRealtime } from '@/hooks/use-realtime'
 import { saveOfflineInvoice, generateTempId, isOnline } from '@/lib/offline'
+import { performAutoBackup } from '@/lib/data-persistence'
 import { useToast } from '@/hooks/use-toast'
 
 const SERVICE_CATALOG = [
@@ -220,6 +221,8 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
             title: status === 'completed' ? 'Bill Finalized!' : 'Saved as Pending',
             description: `Invoice ${invoice.invoiceId} created successfully`,
           })
+          // Auto-backup after creating invoice
+          performAutoBackup().catch(() => {})
           resetForm()
         } else {
           throw new Error('Failed to create invoice')
@@ -249,6 +252,8 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
           title: 'Saved Offline',
           description: 'Invoice saved locally and will sync when online',
         })
+        // Auto-backup after offline save
+        performAutoBackup().catch(() => {})
         resetForm()
       }
     } catch (err) {

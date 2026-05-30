@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
 import { useToast } from '@/hooks/use-toast'
+import { performAutoBackup } from '@/lib/data-persistence'
 
 interface SettingsPageProps {
   currentUser?: {
@@ -186,6 +187,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
         setAdminPassword('')
         setShowNewUserForm(false)
         fetchUsers()
+        // Auto-backup after creating user
+        performAutoBackup().catch(() => {})
       } else {
         toast({ title: 'Failed', description: data.error, variant: 'destructive' })
       }
@@ -202,6 +205,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
       if (res.ok) {
         toast({ title: 'Deleted', description: `User "${username}" has been removed` })
         fetchUsers()
+        // Auto-backup after deleting user
+        performAutoBackup().catch(() => {})
       } else {
         const data = await res.json()
         toast({ title: 'Failed', description: data.error, variant: 'destructive' })
@@ -229,6 +234,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
         toast({ title: 'Data Cleared', description: `Deleted ${data.deletedInvoices} invoices. All data reset to zero.` })
         setShowClearConfirm(false)
         setClearAdminPassword('')
+        // Auto-backup after clearing data (updates backup to reflect cleared state)
+        performAutoBackup().catch(() => {})
       } else {
         toast({ title: 'Failed', description: data.error, variant: 'destructive' })
       }
@@ -269,6 +276,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
           setShopLogo(base64)
           onLogoChange?.(base64)
           toast({ title: 'Logo Updated', description: 'Shop logo has been saved and will appear on invoices' })
+          // Auto-backup after logo upload
+          performAutoBackup().catch(() => {})
         } else {
           toast({ title: 'Failed', description: 'Could not save logo', variant: 'destructive' })
         }
@@ -289,6 +298,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
       setShopLogo(null)
       onLogoChange?.(null)
       toast({ title: 'Logo Removed', description: 'Shop logo has been removed from invoices' })
+      // Auto-backup after logo removal
+      performAutoBackup().catch(() => {})
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to remove logo', variant: 'destructive' })
     }
@@ -305,6 +316,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
       if (res.ok) {
         onShopSettingsChange?.({ shopName, shopAddress, shopTagline })
         toast({ title: 'Shop Info Updated', description: 'Store name and address will appear on new invoices' })
+        // Auto-backup after saving shop info
+        performAutoBackup().catch(() => {})
       } else {
         toast({ title: 'Failed', description: 'Could not save shop info', variant: 'destructive' })
       }
@@ -443,6 +456,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
       if (res.ok) {
         const result = await res.json()
         toast({ title: 'Restore Complete', description: `${result.restored} of ${result.total} invoices restored` })
+        // Auto-backup after CSV restore
+        performAutoBackup().catch(() => {})
       } else {
         throw new Error('Restore failed')
       }
@@ -685,6 +700,9 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
           </div>
         </div>
       </motion.div>
+
+      {/* Data Protection Status */}
+      <DataProtectionStatus />
 
       {/* Hidden Admin Panel - Only visible after 5 taps on version */}
       <AnimatePresence>
@@ -1189,5 +1207,122 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
         </div>
       </motion.div>
     </div>
+  )
+}
+
+// Data Protection Status Component
+function DataProtectionStatus() {
+  const [lastBackup, setLastBackup] = useState<string | null>(null)
+  const [backingUp, setBackingUp] = useState(false)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const time = localStorage.getItem('skm_backup_timestamp')
+    setLastBackup(time)
+  }, [])
+
+  const handleBackupNow = async () => {
+    setBackingUp(true)
+    try {
+      const success = await performAutoBackup()
+      if (success) {
+        const time = localStorage.getItem('skm_backup_timestamp')
+        setLastBackup(time)
+        toast({ title: 'Backup Complete', description: 'All data has been safely backed up to your browser storage' })
+      } else {
+        toast({ title: 'Backup Failed', description: 'Could not create backup. Please try again.', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Backup Failed', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setBackingUp(false)
+    }
+  }
+
+  const formatBackupTime = (isoString: string | null) => {
+    if (!isoString) return 'Never'
+    try {
+      const date = new Date(isoString)
+      const now = new Date()
+      const diffMs = now.getTime() - date.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
+
+      if (diffMins < 1) return 'Just now'
+      if (diffMins < 60) return `${diffMins} min ago`
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    } catch {
+      return 'Unknown'
+    }
+  }
+
+  const isBackupFresh = lastBackup ? (Date.now() - new Date(lastBackup).getTime()) < 3600000 : false
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.12 }}
+    >
+      <div className="relative overflow-hidden rounded-2xl border border-[#10B981]/25 bg-card hover:-translate-y-0.5 transition-all duration-300">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+        <div
+          className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+          style={{ background: 'radial-gradient(circle, #10B981, transparent 70%)' }}
+        />
+        <div className="p-5 pl-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center shadow-[0_0_12px_-3px_#10B98140]">
+              <Database className="h-5 w-5 text-[#10B981]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-foreground font-bold text-base">Data Protection</h3>
+              <p className="text-muted-foreground text-xs mt-0.5">Auto-saves data to prevent loss</p>
+            </div>
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+              isBackupFresh
+                ? 'bg-[#10B981]/10 text-[#10B981]'
+                : 'bg-[#F59E0B]/10 text-[#F59E0B]'
+            }`}>
+              <div className={`h-1.5 w-1.5 rounded-full ${isBackupFresh ? 'bg-[#10B981]' : 'bg-[#F59E0B]'} animate-pulse`} />
+              {isBackupFresh ? 'Protected' : 'Needs Backup'}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between bg-background rounded-lg p-3 border border-border/60">
+              <div>
+                <p className="text-xs font-medium text-foreground">Last Auto-Backup</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Data is auto-backed up every 5 minutes &amp; after every change
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-[#10B981]">
+                {formatBackupTime(lastBackup)}
+              </span>
+            </div>
+
+            <Button
+              className="w-full bg-[#10B981] hover:bg-[#059669] text-white gap-2 h-10 shadow-lg shadow-[#10B981]/25 hover:shadow-xl hover:shadow-[#10B981]/30 transition-all duration-200"
+              onClick={handleBackupNow}
+              disabled={backingUp}
+            >
+              {backingUp ? (
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+              ) : null}
+              {backingUp ? 'Backing Up...' : 'Backup Now'}
+            </Button>
+
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Your data is automatically saved to browser storage to prevent loss from server restarts.
+              If the server resets, your data will be automatically recovered when you log in.
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }

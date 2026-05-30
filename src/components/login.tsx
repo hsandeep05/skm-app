@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { performAutoBackup } from '@/lib/data-persistence'
 
 interface LoginProps {
   onLogin: (user: { id: string; username: string; role: string; counterName: string | null }) => void
@@ -63,6 +64,8 @@ export function Login({ onLogin }: LoginProps) {
       if (res.ok) {
         onLogin(data.user)
         toast({ title: 'Welcome back!', description: `Logged in as ${data.user.username}` })
+        // Trigger auto-backup after login
+        performAutoBackup().catch(() => {})
       } else {
         toast({ title: 'Login Failed', description: data.error, variant: 'destructive' })
       }

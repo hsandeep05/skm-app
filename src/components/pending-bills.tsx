@@ -33,6 +33,7 @@ import {
 import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { performAutoBackup } from '@/lib/data-persistence'
 
 interface PendingBill {
   id: string
@@ -228,6 +229,8 @@ export function PendingBills() {
         }
         fetchPendingBills()
         setRecoverBill(null)
+        // Auto-backup after payment recovery
+        performAutoBackup().catch(() => {})
         setRecoverAmount('')
       } else {
         throw new Error('Failed to update invoice')

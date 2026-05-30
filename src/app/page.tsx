@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut } from 'lucide-react'
+import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut, Shield, Database } from 'lucide-react'
 import { Dashboard } from '@/components/dashboard'
 import { Billing } from '@/components/billing'
 import { Analytics } from '@/components/analytics'
@@ -12,6 +12,7 @@ import { Login } from '@/components/login'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useTheme } from 'next-themes'
+import { performAutoBackup, smartSync, loadBackupFromLocal } from '@/lib/data-persistence'
 
 type TabId = 'dashboard' | 'pending' | 'billing' | 'analytics' | 'settings'
 
@@ -54,6 +55,61 @@ export default function SriKrishnaApp() {
     shopTagline: 'Your Trusted Mobile Service Center',
   })
   const { theme, setTheme } = useTheme()
+
+  // Data persistence state
+  const [restoringData, setRestoringData] = useState(false)
+  const [restoreStatus, setRestoreStatus] = useState<string | null>(null)
+  const backupTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Auto-backup: runs periodically and after data changes
+  const triggerAutoBackup = useCallback(() => {
+    if (backupTimerRef.current) clearTimeout(backupTimerRef.current)
+    backupTimerRef.current = setTimeout(() => {
+      performAutoBackup().catch(() => {})
+    }, 2000) // Debounce: wait 2s after last change
+  }, [])
+
+  // Auto-backup every 5 minutes
+  useEffect(() => {
+    if (!user) return
+    const interval = setInterval(() => {
+      performAutoBackup().catch(() => {})
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [user])
+
+  // Smart sync on app startup: detect data loss and auto-restore
+  useEffect(() => {
+    if (!user) return
+
+    const checkAndRestore = async () => {
+      try {
+        const localBackup = loadBackupFromLocal()
+        if (!localBackup) {
+          // No local backup, just do a fresh backup
+          await performAutoBackup()
+          return
+        }
+
+        // Check server data vs local backup
+        const result = await smartSync()
+        if (result.restored) {
+          setRestoringData(true)
+          setRestoreStatus(`Data recovered! ${result.invoiceCount} invoices and ${result.userCount} users restored.`)
+          setTimeout(() => {
+            setRestoringData(false)
+            setRestoreStatus(null)
+          }, 5000)
+        }
+      } catch (err) {
+        console.error('Auto-restore check failed:', err)
+        // Still do a backup even if sync check fails
+        await performAutoBackup()
+      }
+    }
+
+    checkAndRestore()
+  }, [user])
 
   // Check session on mount
   useEffect(() => {
@@ -231,6 +287,32 @@ export default function SriKrishnaApp() {
           </div>
         </div>
       </header>
+
+      {/* Data Restore Notification */}
+      <AnimatePresence>
+        {(restoringData || restoreStatus) && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] max-w-md w-[90%]"
+          >
+            <div className="bg-[#10B981]/95 backdrop-blur-sm text-white rounded-xl px-4 py-3 shadow-xl shadow-[#10B981]/20 flex items-center gap-3 border border-[#10B981]/30">
+              {restoringData ? (
+                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full flex-shrink-0" />
+              ) : (
+                <Database className="h-5 w-5 flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{restoringData ? 'Restoring Data...' : 'Data Recovered!'}</p>
+                {restoreStatus && !restoringData && (
+                  <p className="text-xs text-white/80 mt-0.5">{restoreStatus}</p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 pb-20 md:pb-6">
