@@ -260,9 +260,6 @@ select:focus {
 }
 
 /* Gradient border utility */
-.gradient-border-bottom {
-  position: relative;
-}
 .gradient-border-bottom::after {
   content: '';
   position: absolute;
@@ -273,9 +270,6 @@ select:focus {
   background: linear-gradient(to right, transparent, rgba(124, 58, 237, 0.4), transparent);
 }
 
-.gradient-border-top {
-  position: relative;
-}
 .gradient-border-top::before {
   content: '';
   position: absolute;
