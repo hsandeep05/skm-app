@@ -243,3 +243,36 @@ Stage Summary:
 - Production DATABASE_URL correctly set to file:/app/db/custom.db in build output
 - Health check endpoint available at /api/health
 - All lint checks pass, dev server running correctly
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Add Sri Krishna Mobiles logo to app, website title, favicon, and all UI locations
+
+Work Log:
+- Copied logo file from /home/z/my-project/upload/Sri-Krishna-Mobiles-bill-generator-logo.png to /public/logo.png
+- Created favicon version (96x96) at /public/favicon.png using sharp
+- Created /public/manifest.json for PWA support with logo icons
+- Updated /src/app/layout.tsx:
+  - Updated metadata title to "Sri Krishna Mobiles - Bill Generator"
+  - Added favicon.ico and apple-touch-icon links pointing to logo
+  - Added OpenGraph image metadata
+  - Added manifest.json link
+- Updated /src/app/page.tsx:
+  - Replaced Receipt icon in header with actual logo image (h-10 w-10 rounded)
+  - Added logo to desktop footer
+  - Updated loading screen to show logo with animation + spinner
+  - Removed unused Shield import
+- Updated /src/components/login.tsx:
+  - Replaced Receipt icon in login header with actual logo image (h-20 w-20 rounded)
+  - Added logo to login footer
+- Updated /src/components/invoice-preview.tsx:
+  - Changed logo from conditional (shopLogo only) to always showing logo (shopLogo || /logo.png)
+  - Added small logo in invoice footer
+- All lint checks pass
+
+Stage Summary:
+- Logo appears in: browser tab (favicon), login page, header bar, footer, invoice preview, loading screen
+- PWA manifest configured with logo
+- OpenGraph metadata includes logo for social sharing
+- Logo used as fallback when no custom shop logo is uploaded

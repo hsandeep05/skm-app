@@ -90,9 +90,9 @@ export function Login({ onLogin }: LoginProps) {
             initial={{ y: -20, opacity: 0, scale: 0.8 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 15 }}
-            className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] shadow-xl shadow-[#7C3AED]/30 mb-4 ring-1 ring-[#7C3AED]/20"
+            className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-white shadow-xl shadow-[#7C3AED]/20 mb-4 ring-2 ring-[#7C3AED]/20 overflow-hidden"
           >
-            <Receipt className="h-8 w-8 text-white" />
+            <img src="/logo.png" alt="Sri Krishna Mobiles" className="h-16 w-16 object-contain" />
           </motion.div>
           <motion.h1
             initial={{ y: -10, opacity: 0 }}
@@ -184,9 +184,12 @@ export function Login({ onLogin }: LoginProps) {
         </motion.div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Sri Krishna Mobiles, Narayanpet — Secure Billing System
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <img src="/logo.png" alt="SKM" className="h-4 w-4 object-contain opacity-60" />
+          <p className="text-xs text-muted-foreground">
+            Sri Krishna Mobiles, Narayanpet — Secure Billing System
+          </p>
+        </div>
       </motion.div>
     </div>
   )

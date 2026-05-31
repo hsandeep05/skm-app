@@ -17,16 +17,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sri Krishna Mobiles - Bill Generator",
   description: "POS & Invoicing web app for Sri Krishna Mobiles, Narayanpet. Generate bills, track sales, and manage payments.",
-  keywords: ["Sri Krishna Mobiles", "Bill Generator", "POS", "Invoicing", "Mobile Repair"],
+  keywords: ["Sri Krishna Mobiles", "Bill Generator", "POS", "Invoicing", "Mobile Repair", "Narayanpet"],
   authors: [{ name: "Sri Krishna Mobiles" }],
   icons: {
-    icon: "/logo.svg",
+    icon: [
+      { url: "/favicon.png", sizes: "96x96", type: "image/png" },
+      { url: "/logo.png", sizes: "720x696", type: "image/png" },
+    ],
+    apple: "/logo.png",
   },
   openGraph: {
-    title: "Sri Krishna Mobiles Bill Generator",
+    title: "Sri Krishna Mobiles - Bill Generator",
     description: "Your trusted mobile service center billing solution",
     type: "website",
+    images: [{ url: "/logo.png", width: 720, height: 696, alt: "Sri Krishna Mobiles" }],
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -36,6 +42,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="96x96" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >

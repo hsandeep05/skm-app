@@ -1,0 +1,22 @@
+{
+  "name": "Sri Krishna Mobiles - Bill Generator",
+  "short_name": "SKM Bills",
+  "description": "POS & Invoicing web app for Sri Krishna Mobiles, Narayanpet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "720x696",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
