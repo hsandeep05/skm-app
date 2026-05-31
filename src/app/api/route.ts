@@ -1,21 +1,11 @@
-import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
+// GET /api - Root API endpoint
+// Responds quickly without blocking on DB connection
 export async function GET() {
-  try {
-    // Quick DB connectivity check
-    await db.$queryRaw`SELECT 1`
-    return NextResponse.json({ 
-      message: "Sri Krishna Mobiles Bill Generator",
-      status: "ok",
-      db: "connected"
-    })
-  } catch (error) {
-    console.error('API health check - DB error:', error)
-    return NextResponse.json({ 
-      message: "Sri Krishna Mobiles Bill Generator",
-      status: "degraded",
-      db: "disconnected"
-    }, { status: 503 })
-  }
+  return NextResponse.json({ 
+    message: "Sri Krishna Mobiles Bill Generator",
+    status: "ok",
+    version: "1.0.0",
+  })
 }
