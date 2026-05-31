@@ -207,3 +207,39 @@ Stage Summary:
 - Users will see a green "Data Recovered!" notification if restore happens
 - Settings shows backup status with manual backup option
 - All lint checks pass, all API endpoints verified working
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Fix "PreconditionFailed - function is pending state" error after publishing
+
+Problem Diagnosed:
+The "PreconditionFailed - function is pending state" error happens because the serverless function fails to start properly. Three root causes identified:
+
+1. MISSING `prisma generate` in build pipeline: The build.sh script only ran `bun install` and `bun run build`, but never ran `prisma generate`. Without this, the Prisma Client JS code doesn't exist, causing the server to crash on startup when trying to import `@prisma/client`.
+
+2. WRONG DATABASE_URL in standalone .env: The build process copies the dev `.env` file (containing `DATABASE_URL=file:/home/z/my-project/db/custom.db`) into the standalone output. In production, this path doesn't exist, so Prisma can't connect to the database, and the server never becomes healthy.
+
+3. NO HEALTH CHECK: There was no `/api/health` endpoint for the deployment platform to verify the application is ready, so it just keeps reporting "pending."
+
+Fixes Applied:
+
+1. Added `postinstall` script in package.json: `"postinstall": "prisma generate"` — ensures Prisma Client is generated every time dependencies are installed (during build).
+
+2. Updated build script in package.json to fix .env: The build command now appends `echo 'DATABASE_URL=file:/app/db/custom.db' > .next/standalone/.env` to write the correct production DATABASE_URL into the standalone output.
+
+3. Added explicit `prisma generate` step in .zscripts/build.sh between `bun install` and `bun run build`.
+
+4. Added DATABASE_URL fix in .zscripts/build.sh: Writes `DATABASE_URL=file:/app/db/custom.db` to the standalone .env after copying files.
+
+5. Created /api/health endpoint: Returns `{ status: "ok", db: "connected" }` with 200 if DB works, or 503 if DB is down. Deployment platform can use this to verify readiness.
+
+6. Updated /api root endpoint: Also checks DB connectivity and returns status.
+
+7. Updated src/lib/db.ts: Reduced query logging in production (only errors/warnings), added graceful shutdown handler.
+
+Stage Summary:
+- Prisma Client generation now automatic via postinstall hook
+- Production DATABASE_URL correctly set to file:/app/db/custom.db in build output
+- Health check endpoint available at /api/health
+- All lint checks pass, dev server running correctly

@@ -35,6 +35,10 @@ mkdir -p "$BUILD_DIR"
 echo "📦 安装依赖..."
 bun install
 
+# 生成 Prisma Client
+echo "🔧 生成 Prisma Client..."
+bun run db:generate
+
 # 构建 Next.js 应用
 echo "🔨 构建 Next.js 应用..."
 bun run build
@@ -76,6 +80,10 @@ if [ -d "public" ]; then
     echo "  - 复制 public"
     cp -r public "$BUILD_DIR/next-service-dist/"
 fi
+
+# 修正 standalone 构建中的 .env 文件，确保生产环境 DATABASE_URL 正确
+echo "  - 修正 .env 文件中的 DATABASE_URL..."
+echo "DATABASE_URL=file:/app/db/custom.db" > "$BUILD_DIR/next-service-dist/.env"
 
 # 将测试环境数据库复制到构建产物中，生产环境直接使用这份数据库
 if [ -f "./db/custom.db" ]; then

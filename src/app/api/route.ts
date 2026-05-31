@@ -1,5 +1,21 @@
-import { NextResponse } from "next/server";
+import { db } from '@/lib/db'
+import { NextResponse } from 'next/server'
 
 export async function GET() {
-  return NextResponse.json({ message: "Hello, world!" });
+  try {
+    // Quick DB connectivity check
+    await db.$queryRaw`SELECT 1`
+    return NextResponse.json({ 
+      message: "Sri Krishna Mobiles Bill Generator",
+      status: "ok",
+      db: "connected"
+    })
+  } catch (error) {
+    console.error('API health check - DB error:', error)
+    return NextResponse.json({ 
+      message: "Sri Krishna Mobiles Bill Generator",
+      status: "degraded",
+      db: "disconnected"
+    }, { status: 503 })
+  }
 }
