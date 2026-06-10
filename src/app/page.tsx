@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut, Database } from 'lucide-react'
+import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut, Database, Unlock } from 'lucide-react'
 import { Dashboard } from '@/components/dashboard'
 import { Billing } from '@/components/billing'
 import { Analytics } from '@/components/analytics'
 import { SettingsPage } from '@/components/settings'
+import { Unlocking } from '@/components/unlocking'
 import { PendingBills } from '@/components/pending-bills'
 import { Login } from '@/components/login'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { useTheme } from 'next-themes'
 import { performAutoBackup, smartSync, loadBackupFromLocal } from '@/lib/data-persistence'
 
-type TabId = 'dashboard' | 'pending' | 'billing' | 'analytics' | 'settings'
+type TabId = 'dashboard' | 'pending' | 'billing' | 'unlocking' | 'analytics' | 'settings'
 
 interface TabConfig {
   id: TabId
@@ -33,6 +34,7 @@ const tabs: TabConfig[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <Home className="h-4 w-4" /> },
   { id: 'pending', label: 'Pending Bills', icon: <Clock className="h-4 w-4" /> },
   { id: 'billing', label: 'Create Bill', icon: <Receipt className="h-4 w-4" /> },
+  { id: 'unlocking', label: 'Unlocking', icon: <Unlock className="h-4 w-4" /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
   { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
 ]
@@ -192,6 +194,8 @@ export default function SriKrishnaApp() {
         return <PendingBills />
       case 'billing':
         return <Billing shopLogo={shopLogo} shopSettings={shopSettings} />
+      case 'unlocking':
+        return <Unlocking />
       case 'analytics':
         return <Analytics />
       case 'settings':

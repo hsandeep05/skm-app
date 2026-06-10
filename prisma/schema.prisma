@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = "file:./db/custom.db"
 }
 
 model Invoice {
@@ -74,4 +73,14 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String @default("")
+}
+
+model UnlockingEntry {
+  id            String   @id @default(cuid())
+  phoneName     String
+  customerName  String   @default("")
+  frpType       String   @default("Online")
+  amount        Float    @default(0)
+  date          String
+  createdAt     DateTime @default(now())
 }

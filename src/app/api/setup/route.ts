@@ -89,6 +89,19 @@ export async function POST() {
       );
     `)
 
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "UnlockingEntry" (
+        "id" TEXT NOT NULL,
+        "phoneName" TEXT NOT NULL,
+        "customerName" TEXT NOT NULL DEFAULT '',
+        "frpType" TEXT NOT NULL DEFAULT 'Online',
+        "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "date" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "UnlockingEntry_pkey" PRIMARY KEY ("id")
+      );
+    `)
+
     // Create unique indexes (IF NOT EXISTS to be safe)
     try {
       await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Invoice_invoiceId_key" ON "Invoice"("invoiceId");`)
