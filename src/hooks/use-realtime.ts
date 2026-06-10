@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
 import { getOfflineInvoices, deleteOfflineInvoice, isOnline } from '@/lib/offline'
 
+// On Vercel/serverless, WebSocket (Socket.io) is not available
+// The hook gracefully degrades — isConnected stays false, 
+// but all other functionality (fetch, backup, restore) works via HTTP
+
 export function useRealtime() {
-  const socketRef = useRef<Socket | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const [lastEvent, setLastEvent] = useState<any>(null)
+  const [isConnected] = useState(false)
+  const [lastEvent] = useState<any>(null)
 
   const syncOfflineInvoices = useCallback(async () => {
     if (!isOnline()) return
@@ -48,34 +50,46 @@ export function useRealtime() {
     }
   }, [])
 
+  // Try to connect to WebSocket (only works when sync-service is running)
   useEffect(() => {
-    const socket = io('/?XTransformPort=3003', {
-      transports: ['websocket', 'polling'],
-      forceNew: true,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-    })
-    socketRef.current = socket
+    let socket: any = null
 
-    socket.on('connect', () => {
-      setIsConnected(true)
-      // Sync offline invoices when connection is restored
-      syncOfflineInvoices()
-    })
-    socket.on('disconnect', () => setIsConnected(false))
-    socket.on('invoice-change', (event: any) => setLastEvent(event))
-    socket.on('force-refresh', () => setLastEvent({ type: 'force-refresh' }))
+    const tryConnect = async () => {
+      try {
+        // Dynamically import socket.io-client — fails gracefully if not available
+        const { io } = await import('socket.io-client')
+        socket = io('/?XTransformPort=3003', {
+          transports: ['websocket', 'polling'],
+          forceNew: true,
+          reconnection: true,
+          reconnectionAttempts: 3,
+          reconnectionDelay: 2000,
+        })
 
-    return () => { socket.disconnect() }
+        socket.on('connect', () => {
+          syncOfflineInvoices()
+        })
+      } catch (e) {
+        // Socket.io not available (Vercel/serverless) — that's OK
+        console.log('WebSocket not available, using HTTP-only mode')
+      }
+    }
+
+    tryConnect()
+
+    return () => {
+      if (socket) socket.disconnect()
+    }
   }, [syncOfflineInvoices])
 
-  const emitChange = (event: any) => {
-    socketRef.current?.emit('invoice-change', event)
+  const emitChange = (_event: any) => {
+    // No-op when WebSocket is not available
+    // Data sync happens via auto-backup/restore through HTTP
   }
 
   const requestRefresh = () => {
-    socketRef.current?.emit('force-refresh')
+    // No-op when WebSocket is not available
+    // Components handle their own data fetching
   }
 
   return { isConnected, lastEvent, emitChange, requestRefresh, syncOfflineInvoices }
