@@ -26,8 +26,20 @@ export function Login({ onLogin }: LoginProps) {
     const autoSeed = async () => {
       setSeeding(true)
       try {
-        // Try to seed - will only create if no users exist
-        await fetch('/api/auth/seed', { method: 'POST' })
+        // First try to seed - will only create if no users exist
+        const seedRes = await fetch('/api/auth/seed', { method: 'POST' })
+        const seedData = await seedRes.json()
+
+        // If tables don't exist yet, run setup first
+        if (seedData.needsSetup) {
+          console.log('[Login] Tables not found, running setup...')
+          const setupRes = await fetch('/api/setup', { method: 'POST' })
+          const setupData = await setupRes.json()
+          if (setupData.success) {
+            console.log('[Login] Setup complete, seeding user...')
+            await fetch('/api/auth/seed', { method: 'POST' })
+          }
+        }
       } catch (err) {
         // Ignore errors - seed may already exist
       } finally {

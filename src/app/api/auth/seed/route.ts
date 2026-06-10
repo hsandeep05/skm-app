@@ -8,6 +8,7 @@ function hashPassword(password: string): string {
 
 // Auto-seed the default admin user if no users exist
 // Credentials: Username: SriKrishna, Password: Krishna@123
+// NOTE: Tables must exist first - call POST /api/setup if tables don't exist
 export async function POST() {
   try {
     const userCount = await db.user.count()
@@ -35,8 +36,15 @@ export async function POST() {
         counterName: user.counterName,
       },
     }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Seed error:', error)
-    return NextResponse.json({ error: 'Failed to seed user' }, { status: 500 })
+    // If table doesn't exist, tell the client to run setup first
+    if (error?.message?.includes('does not exist') || error?.code === '42P01') {
+      return NextResponse.json({
+        error: 'Database tables not found. Please run setup first: POST /api/setup',
+        needsSetup: true,
+      }, { status: 503 })
+    }
+    return NextResponse.json({ error: 'Failed to seed user', detail: error.message }, { status: 500 })
   }
 }
