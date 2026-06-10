@@ -55,6 +55,7 @@ interface LineItem {
   costPrice: number
   sellingPrice: number
   isCustom: boolean
+  isFree: boolean
 }
 
 function formatCurrency(amount: number): string {
@@ -93,6 +94,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
       costPrice: 0,
       sellingPrice: 0,
       isCustom: false,
+      isFree: false,
     }
     setItems((prev) => [...prev, newItem])
   }, [])
@@ -104,6 +106,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
       costPrice: 0,
       sellingPrice: 0,
       isCustom: true,
+      isFree: false,
     }
     setItems((prev) => [...prev, newItem])
   }, [])
@@ -170,11 +173,11 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
       return
     }
 
-    const hasEmptyPrice = items.some(item => !item.sellingPrice || item.sellingPrice <= 0)
+    const hasEmptyPrice = items.some(item => !item.isFree && (!item.sellingPrice || item.sellingPrice <= 0))
     if (hasEmptyPrice) {
       toast({
         title: 'Validation Error',
-        description: 'All items must have a selling price greater than 0',
+        description: 'All non-free items must have a selling price greater than 0',
         variant: 'destructive',
       })
       return
@@ -405,6 +408,9 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
                             {item.isCustom && (
                               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA]">Custom</span>
                             )}
+                            {item.isFree && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#10B981]/20 text-[#10B981]">Free</span>
+                            )}
                             {item.description && (
                               <span className="text-xs text-muted-foreground truncate max-w-[140px]">{item.description}</span>
                             )}
@@ -464,16 +470,37 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
                             </div>
                           </div>
                           <div>
-                            <Label className="text-muted-foreground text-[10px] font-medium">Selling Price <span className="text-[#EF4444]">*</span></Label>
+                            <Label className="text-muted-foreground text-[10px] font-medium">Selling Price {!item.isFree && <span className="text-[#EF4444]">*</span>}</Label>
                             <Input
                               type="number"
-                              value={item.sellingPrice || ''}
+                              value={item.isFree ? 0 : (item.sellingPrice || '')}
                               onChange={(e) => updateItem(item.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
                               placeholder="₹0"
-                              className={smallInputClass}
+                              disabled={item.isFree}
+                              className={`${smallInputClass} ${item.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
                             />
                           </div>
                         </div>
+                        {item.isCustom && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <Checkbox
+                              id={`free-${item.id}`}
+                              checked={item.isFree}
+                              onCheckedChange={(checked) => {
+                                const isFree = checked === true
+                                setItems((prev) =>
+                                  prev.map((i) =>
+                                    i.id === item.id ? { ...i, isFree, sellingPrice: isFree ? 0 : i.sellingPrice } : i
+                                  )
+                                )
+                              }}
+                              className="border-[#10B981]/50 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] data-[state=checked]:text-white"
+                            />
+                            <Label htmlFor={`free-${item.id}`} className="text-muted-foreground text-xs font-medium cursor-pointer select-none">
+                              Free
+                            </Label>
+                          </div>
+                        )}
                       </motion.div>
                     ))}
                   </AnimatePresence>
