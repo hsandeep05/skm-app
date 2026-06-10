@@ -56,3 +56,7 @@ prompt
 server.log
 # Skills directory
 /skills/
+/upload/
+/db/custom.db
+prisma/db/custom.db
+mini-services/
