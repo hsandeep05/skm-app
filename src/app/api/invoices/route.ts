@@ -60,29 +60,22 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Generate sequential invoice ID with counter sync safety
-    // First, ensure counter is in sync with the max existing invoiceId
-    const maxInvoice = await db.invoice.findFirst({
+    // Fetch all SRI invoice IDs and find the max numeric value
+    const existingInvoices = await db.invoice.findMany({
       where: { invoiceId: { startsWith: 'SRI' } },
-      orderBy: { invoiceId: 'desc' },
       select: { invoiceId: true },
     })
 
     let nextValue = 1
-    if (maxInvoice?.invoiceId) {
-      const maxNum = parseInt(maxInvoice.invoiceId.replace('SRI', ''), 10)
-      if (!isNaN(maxNum)) {
-        nextValue = maxNum + 1
-      }
+    if (existingInvoices.length > 0) {
+      const maxNum = existingInvoices.reduce((max, inv) => {
+        const num = parseInt(inv.invoiceId.replace('SRI', ''), 10)
+        return !isNaN(num) && num > max ? num : max
+      }, 0)
+      nextValue = maxNum + 1
     }
 
-    // Update counter to be at least nextValue (handles desync after redeploy/restore)
-    const counter = await db.counter.upsert({
-      where: { name: 'invoice' },
-      update: { value: nextValue },
-      create: { name: 'invoice', value: nextValue },
-    })
-
-    const invoiceId = `SRI${String(counter.value).padStart(5, '0')}`
+    const invoiceId = `SRI${String(nextValue).padStart(5, '0')}`
 
     const invoice = await db.invoice.create({
       data: {
