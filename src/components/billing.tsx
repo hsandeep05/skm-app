@@ -203,7 +203,8 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
     }
 
     try {
-      if (isOnline()) {
+      // Always try server first, even if navigator.onLine is false
+      try {
         const res = await fetch('/api/invoices', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -211,56 +212,57 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
         })
         if (res.ok) {
           const { invoice } = await res.json()
-          emitChange({
-            type: status === 'completed' ? 'invoice-finalized' : 'invoice-created',
-            invoiceId: invoice.invoiceId,
-            timestamp: new Date().toISOString(),
-            operator: 'operator_primary',
-          })
+          try { emitChange({ type: status === 'completed' ? 'invoice-finalized' : 'invoice-created', invoiceId: invoice.invoiceId, timestamp: new Date().toISOString(), operator: 'operator_primary' }) } catch {}
           toast({
             title: status === 'completed' ? 'Bill Finalized!' : 'Saved as Pending',
             description: `Invoice ${invoice.invoiceId} created successfully`,
           })
-          // Auto-backup after creating invoice
           performAutoBackup().catch(() => {})
           resetForm()
+          return
         } else {
-          throw new Error('Failed to create invoice')
+          const errorData = await res.json().catch(() => ({}))
+          console.error('Server error:', errorData)
+          throw new Error(errorData.detail || errorData.error || 'Failed to create invoice')
         }
-      } else {
-        await saveOfflineInvoice({
-          id: invoicePayload.tempId,
-          tempId: invoicePayload.tempId,
-          syncStatus: 'pending',
-          date: billDate,
-          customerName: invoicePayload.customerName,
-          customerPhone: invoicePayload.customerPhone || undefined,
-          mobileName: invoicePayload.mobileName,
-          items: invoicePayload.items,
-          subtotal: invoicePayload.subtotal,
-          discount: invoicePayload.discount,
-          grandTotal: invoicePayload.grandTotal,
-          amountPaid: invoicePayload.amountPaid,
-          balanceDue: invoicePayload.balanceDue,
-          calculatedNetProfit: invoicePayload.calculatedNetProfit,
-          paymentStatus: invoicePayload.paymentStatus,
-          status: invoicePayload.status,
-          updatedBy: invoicePayload.updatedBy,
-          createdAt: new Date().toISOString(),
-        })
-        toast({
-          title: 'Saved Offline',
-          description: 'Invoice saved locally and will sync when online',
-        })
-        // Auto-backup after offline save
-        performAutoBackup().catch(() => {})
-        resetForm()
+      } catch (serverErr: any) {
+        // If server failed and we're truly offline, fall back to local storage
+        if (!navigator.onLine) {
+          await saveOfflineInvoice({
+            id: invoicePayload.tempId,
+            tempId: invoicePayload.tempId,
+            syncStatus: 'pending',
+            date: billDate,
+            customerName: invoicePayload.customerName,
+            customerPhone: invoicePayload.customerPhone || undefined,
+            mobileName: invoicePayload.mobileName,
+            items: invoicePayload.items,
+            subtotal: invoicePayload.subtotal,
+            discount: invoicePayload.discount,
+            grandTotal: invoicePayload.grandTotal,
+            amountPaid: invoicePayload.amountPaid,
+            balanceDue: invoicePayload.balanceDue,
+            calculatedNetProfit: invoicePayload.calculatedNetProfit,
+            paymentStatus: invoicePayload.paymentStatus,
+            status: invoicePayload.status,
+            updatedBy: invoicePayload.updatedBy,
+            createdAt: new Date().toISOString(),
+          })
+          toast({
+            title: 'Saved Offline',
+            description: 'Invoice saved locally and will sync when online',
+          })
+          performAutoBackup().catch(() => {})
+          resetForm()
+          return
+        }
+        throw serverErr
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Save error:', err)
       toast({
         title: 'Error',
-        description: 'Failed to save invoice. Please try again.',
+        description: err?.message || 'Failed to save invoice. Please try again.',
         variant: 'destructive',
       })
     } finally {

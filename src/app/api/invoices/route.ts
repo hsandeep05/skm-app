@@ -32,6 +32,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper to sanitize numeric values (handle NaN, undefined, null)
+function safeNumber(value: any, defaultValue = 0): number {
+  const num = Number(value)
+  return isNaN(num) ? defaultValue : num
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -70,21 +76,21 @@ export async function POST(request: NextRequest) {
         date: date || new Date().toISOString().split('T')[0],
         customerName: customerName || 'Walk-in Customer',
         customerPhone: customerPhone || null,
-        mobileName,
-        subtotal: subtotal || 0,
-        discount: discount || 0,
-        grandTotal: grandTotal || 0,
-        amountPaid: amountPaid || 0,
-        balanceDue: balanceDue || 0,
-        calculatedNetProfit: calculatedNetProfit || 0,
-        paymentStatus: paymentStatus || (balanceDue > 0 ? 'Partial' : 'Paid'),
+        mobileName: mobileName || 'Unknown',
+        subtotal: safeNumber(subtotal),
+        discount: safeNumber(discount),
+        grandTotal: safeNumber(grandTotal),
+        amountPaid: safeNumber(amountPaid),
+        balanceDue: safeNumber(balanceDue),
+        calculatedNetProfit: safeNumber(calculatedNetProfit),
+        paymentStatus: paymentStatus || (safeNumber(balanceDue) > 0 ? 'Partial' : 'Paid'),
         status: status || 'pending',
         updatedBy: updatedBy || 'operator_primary',
         items: {
           create: items?.map((item: any) => ({
-            description: item.description,
-            costPrice: item.costPrice || 0,
-            sellingPrice: item.sellingPrice || 0,
+            description: item.description || 'Item',
+            costPrice: safeNumber(item.costPrice),
+            sellingPrice: safeNumber(item.sellingPrice),
           })) || [],
         },
       },
@@ -92,8 +98,11 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ invoice }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating invoice:', error)
-    return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 })
+    return NextResponse.json({
+      error: 'Failed to create invoice',
+      detail: error?.message || String(error),
+    }, { status: 500 })
   }
 }
