@@ -1166,7 +1166,7 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
                 { label: 'App Name', value: 'Sri Krishna Mobiles Bill Generator', isVersion: false },
                 { label: 'Version', value: '1.0.0', isVersion: true },
                 { label: 'Framework', value: 'Next.js 16', isVersion: false },
-                { label: 'Database', value: 'SQLite (Prisma)', isVersion: false },
+                { label: 'Database', value: 'PostgreSQL (Prisma)', isVersion: false },
               ].map((item, idx) => (
                 <div
                   key={item.label}

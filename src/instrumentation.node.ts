@@ -1,11 +1,10 @@
 // Next.js Node.js instrumentation - runs on server startup only (not Edge)
-// This helps verify the function starts correctly on deployment platforms
 
 export async function register() {
   console.log('[Startup] App starting...')
   console.log('[Startup] NODE_ENV:', process.env.NODE_ENV)
-  console.log('[Startup] DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'not set (using default)')
-  console.log('[Startup] CWD:', process.cwd())
+  console.log('[Startup] DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'not set')
+  console.log('[Startup] DIRECT_URL:', process.env.DIRECT_URL ? 'set' : 'not set')
 
   // Pre-warm the database connection
   try {
