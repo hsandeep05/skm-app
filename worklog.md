@@ -44,3 +44,33 @@ Stage Summary:
 - Unlocking tab now has Today / This Week / This Month / Show All quick filters
 - API confirmed working: period=week and period=month return correct filtered data
 - GitHub push blocked - needs new valid token from user
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Clean all test data from the database so app is fresh for client delivery
+
+Work Log:
+- Investigated database setup: main DB at `db/custom.db`, stale copy at `prisma/db/custom.db`
+- Verified main DB is already clean (0 invoices, 0 items, 0 unlocking entries, 0 counters)
+- Only kept: 1 admin user (SriKrishna) and 1 setting (shopName = "Sri Krishna Mobiles")
+- Removed stale `prisma/db/custom.db` to prevent confusion (it had outdated schema missing UnlockingEntry table)
+- Investigated data persistence layer (`data-persistence.ts`) - confirmed it uses localStorage backups
+- `smartSync()` never auto-restores old data (always returns `restored: false`)
+- `performAutoRestore()` is defined but never called anywhere
+- The clear-data flow in settings correctly clears localStorage before calling auto-backup
+- Verified all API endpoints return clean data:
+  - `/api/invoices` → `{"invoices":[]}`
+  - `/api/unlocking` → `{"entries":[],"totalAmount":0,"count":0}`
+  - `/api/dashboard` → all zeros
+  - `/api/analytics` → all zeros
+  - `/api/backup` → only admin user and shopName setting
+- Verified via agent browser that all tabs show empty/clean data
+- No features were changed - only data cleanup
+
+Stage Summary:
+- Database completely clean: 0 invoices, 0 unlocking entries, 0 counters
+- App retains only essential data: admin user (SriKrishna/Krishna@123) and shop name setting
+- All tabs verified clean via browser: Dashboard (all ₹0), Unlocking (0 entries), Analytics (0 bills), Pending (none)
+- No code changes made - data cleanup only
+- App is ready for client delivery
