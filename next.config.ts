@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  compress: false, // Disable compression - causes crashes through Caddy proxy
   allowedDevOrigins: [
     '.space-z.ai',
     'localhost',
