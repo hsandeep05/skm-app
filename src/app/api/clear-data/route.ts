@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
     const deletedItems = await db.invoiceItem.deleteMany()
     // Delete all invoices
     const deletedInvoices = await db.invoice.deleteMany()
+    // Delete all unlocking entries
+    const deletedUnlocking = await db.unlockingEntry.deleteMany()
     // Reset the invoice counter
     await db.counter.deleteMany()
 
@@ -34,7 +36,8 @@ export async function POST(request: NextRequest) {
       success: true,
       deletedInvoices: deletedInvoices.count,
       deletedItems: deletedItems.count,
-      message: 'All invoice data has been cleared',
+      deletedUnlocking: deletedUnlocking.count,
+      message: 'All invoice and unlocking data has been cleared',
     })
   } catch (error) {
     console.error('Clear data error:', error)

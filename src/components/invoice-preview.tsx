@@ -4,7 +4,7 @@ import React, { useRef } from 'react'
 import { format } from 'date-fns'
 import { toPng } from 'html-to-image'
 import { Button } from '@/components/ui/button'
-import { Download } from 'lucide-react'
+import { Download, Share2 } from 'lucide-react'
 
 export interface InvoiceItem {
   description: string
@@ -60,6 +60,44 @@ export function InvoicePreview({ data, showDownload = false }: { data: InvoiceDa
       link.click()
     } catch (err) {
       console.error('Failed to download invoice:', err)
+    }
+  }
+
+  const handleShare = async () => {
+    if (!invoiceRef.current) return
+    try {
+      const dataUrl = await toPng(invoiceRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#FFFFFF',
+      })
+      // Convert data URL to blob for sharing
+      const response = await fetch(dataUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `invoice-${data.invoiceId}.png`, { type: 'image/png' })
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Invoice ${data.invoiceId}`,
+          text: `Bill from ${data.shopName || 'SRI Krishna Mobiles'} - ${data.customerName} - ${formatCurrency(data.grandTotal)}`,
+          files: [file],
+        })
+      } else {
+        // Fallback: copy image to clipboard
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ])
+          alert('Invoice image copied to clipboard! You can paste it in WhatsApp or any app.')
+        } catch {
+          // Final fallback: just download
+          handleDownload()
+        }
+      }
+    } catch (err) {
+      console.error('Failed to share invoice:', err)
+      // Fallback to download
+      handleDownload()
     }
   }
 
@@ -191,15 +229,25 @@ export function InvoicePreview({ data, showDownload = false }: { data: InvoiceDa
         </div>
       </div>
 
-      {/* Download Button */}
+      {/* Action Buttons */}
       {showDownload && (
-        <Button
-          onClick={handleDownload}
-          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Download as Image
-        </Button>
+        <div className="flex gap-2 w-full">
+          <Button
+            onClick={handleDownload}
+            className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </Button>
+          <Button
+            onClick={handleShare}
+            variant="outline"
+            className="flex-1 border-[#10B981]/40 text-[#10B981] hover:bg-[#10B981]/10 gap-2"
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        </div>
       )}
     </div>
   )

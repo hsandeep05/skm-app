@@ -424,10 +424,10 @@ export function Analytics() {
                 </div>
                 <div>
                   <h3 className="text-foreground font-bold text-base">
-                    Recent Completed Bills
+                    All Completed Bills
                   </h3>
                   <p className="text-muted-foreground text-xs mt-0.5">
-                    Successfully finalized invoices
+                    {completedBills.length} {completedBills.length === 1 ? 'bill' : 'bills'} found
                   </p>
                 </div>
               </div>
@@ -443,7 +443,7 @@ export function Analytics() {
                 <p className="text-xs opacity-70">Create and finalize your first bill!</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-96">
+              <ScrollArea className="max-h-[600px]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {completedBills.map((bill: any, idx: number) => (
                     <motion.div
