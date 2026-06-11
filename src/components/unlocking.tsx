@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Unlock, Phone, Save, CalendarDays, Filter } from 'lucide-react'
+import { Plus, Trash2, Unlock, Phone, Save, CalendarDays, Filter, CalendarRange, CalendarCheck } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,13 +45,21 @@ export function Unlocking() {
   const [totalAmount, setTotalAmount] = useState(0)
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0])
   const [showAll, setShowAll] = useState(false)
+  const [filterPeriod, setFilterPeriod] = useState<'today' | 'week' | 'month'>('today')
   const { toast } = useToast()
 
   const fetchEntries = useCallback(async () => {
     try {
-      const url = showAll
-        ? '/api/unlocking?all=true'
-        : `/api/unlocking?date=${filterDate}`
+      let url: string
+      if (showAll) {
+        url = '/api/unlocking?all=true'
+      } else if (filterPeriod === 'week') {
+        url = '/api/unlocking?period=week'
+      } else if (filterPeriod === 'month') {
+        url = '/api/unlocking?period=month'
+      } else {
+        url = `/api/unlocking?date=${filterDate}`
+      }
       const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
@@ -61,7 +69,7 @@ export function Unlocking() {
     } catch (err) {
       console.error('Fetch entries error:', err)
     }
-  }, [filterDate, showAll])
+  }, [filterDate, showAll, filterPeriod])
 
   useEffect(() => {
     fetchEntries()
@@ -256,7 +264,7 @@ export function Unlocking() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-muted-foreground text-xs font-medium">
-                        {showAll ? 'Total (All)' : `Total (${filterDate})`}
+                        {showAll ? 'Total (All)' : filterPeriod === 'week' ? 'Total (This Week)' : filterPeriod === 'month' ? 'Total (This Month)' : `Total (${filterDate})`}
                       </p>
                       <p className="text-2xl font-bold text-[#10B981] tabular-nums mt-1">
                         {formatCurrency(totalAmount)}
@@ -282,31 +290,77 @@ export function Unlocking() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center gap-2 flex-wrap"
+              className="space-y-2"
             >
-              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={filterDate}
-                  onChange={(e) => {
-                    setFilterDate(e.target.value)
-                    setShowAll(false)
-                  }}
-                  className={`${inputClass} max-w-[180px]`}
-                />
+              {/* Quick Period Filters */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+                <Button
+                  variant={filterPeriod === 'today' && !showAll ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setFilterPeriod('today'); setShowAll(false) }}
+                  className={`h-8 text-xs font-semibold gap-1.5 ${
+                    filterPeriod === 'today' && !showAll
+                      ? 'bg-[#F59E0B] hover:bg-[#D97706] text-black'
+                      : 'border-border/60 text-muted-foreground hover:text-foreground hover:border-[#F59E0B]/30'
+                  }`}
+                >
+                  <CalendarDays className="h-3 w-3" />
+                  Today
+                </Button>
+                <Button
+                  variant={filterPeriod === 'week' && !showAll ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setFilterPeriod('week'); setShowAll(false) }}
+                  className={`h-8 text-xs font-semibold gap-1.5 ${
+                    filterPeriod === 'week' && !showAll
+                      ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white'
+                      : 'border-border/60 text-muted-foreground hover:text-foreground hover:border-[#7C3AED]/30'
+                  }`}
+                >
+                  <CalendarRange className="h-3 w-3" />
+                  This Week
+                </Button>
+                <Button
+                  variant={filterPeriod === 'month' && !showAll ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setFilterPeriod('month'); setShowAll(false) }}
+                  className={`h-8 text-xs font-semibold gap-1.5 ${
+                    filterPeriod === 'month' && !showAll
+                      ? 'bg-[#10B981] hover:bg-[#059669] text-white'
+                      : 'border-border/60 text-muted-foreground hover:text-foreground hover:border-[#10B981]/30'
+                  }`}
+                >
+                  <CalendarCheck className="h-3 w-3" />
+                  This Month
+                </Button>
+                <Button
+                  variant={showAll ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowAll(!showAll)}
+                  className={`h-8 text-xs font-semibold gap-1.5 ${
+                    showAll
+                      ? 'bg-[#F59E0B] hover:bg-[#D97706] text-black'
+                      : 'border-border/60 text-muted-foreground hover:text-foreground hover:border-[#F59E0B]/30'
+                  }`}
+                >
+                  Show All
+                </Button>
               </div>
-              <Button
-                variant={showAll ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowAll(!showAll)}
-                className={showAll
-                  ? 'bg-[#F59E0B] hover:bg-[#D97706] text-black font-semibold'
-                  : 'border-[#F59E0B]/30 text-[#F59E0B] hover:bg-[#F59E0B]/10'
-                }
-              >
-                Show All
-              </Button>
+
+              {/* Date picker - only visible when Today is selected */}
+              {filterPeriod === 'today' && !showAll && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => {
+                      setFilterDate(e.target.value)
+                    }}
+                    className={`${inputClass} max-w-[180px]`}
+                  />
+                </div>
+              )}
             </motion.div>
 
             {/* Entries as Cards */}
@@ -397,7 +451,7 @@ export function Unlocking() {
                 <Separator className="bg-border/60 mb-3" />
                 <div className="flex items-center justify-between bg-[#10B981]/[0.07] -mx-1 px-4 py-3 rounded-xl border border-[#10B981]/20">
                   <span className="text-foreground font-bold text-sm">
-                    Total ({entries.length} {entries.length === 1 ? 'entry' : 'entries'})
+                    Total ({entries.length} {entries.length === 1 ? 'entry' : 'entries'}) • {showAll ? 'All' : filterPeriod === 'week' ? 'This Week' : filterPeriod === 'month' ? 'This Month' : filterDate}
                   </span>
                   <span className="text-xl font-bold text-[#10B981] tabular-nums">
                     {formatCurrency(totalAmount)}

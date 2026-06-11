@@ -7,10 +7,45 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
     const all = searchParams.get('all')
+    const period = searchParams.get('period') // 'week' or 'month'
 
     let entries
     if (all === 'true') {
       entries = await db.unlockingEntry.findMany({
+        orderBy: { createdAt: 'desc' },
+      })
+    } else if (period === 'week') {
+      // This week: from Monday to Sunday of current week
+      const now = new Date()
+      const dayOfWeek = now.getDay() // 0=Sun, 1=Mon, ...
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      const monday = new Date(now)
+      monday.setDate(now.getDate() + mondayOffset)
+      monday.setHours(0, 0, 0, 0)
+      const sunday = new Date(monday)
+      sunday.setDate(monday.getDate() + 6)
+      sunday.setHours(23, 59, 59, 999)
+
+      const startDate = monday.toISOString().split('T')[0]
+      const endDate = sunday.toISOString().split('T')[0]
+
+      entries = await db.unlockingEntry.findMany({
+        where: {
+          date: { gte: startDate, lte: endDate },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    } else if (period === 'month') {
+      // This month: 1st to last day of current month
+      const now = new Date()
+      const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+      entries = await db.unlockingEntry.findMany({
+        where: {
+          date: { gte: startDate, lte: endDate },
+        },
         orderBy: { createdAt: 'desc' },
       })
     } else if (date) {
