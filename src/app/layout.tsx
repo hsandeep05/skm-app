@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NODE_ENV === 'production' ? 'https://skm.app' : 'http://localhost:3000'),
   title: "Sri Krishna Mobiles - Bill Generator",
   description: "POS & Invoicing web app for Sri Krishna Mobiles, Narayanpet. Generate bills, track sales, and manage payments.",
   keywords: ["Sri Krishna Mobiles", "Bill Generator", "POS", "Invoicing", "Mobile Repair", "Narayanpet"],

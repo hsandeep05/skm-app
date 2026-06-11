@@ -3,13 +3,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut, Database, Unlock, Plus, Menu, X } from 'lucide-react'
-import { Dashboard } from '@/components/dashboard'
-import { Billing } from '@/components/billing'
-import { Analytics } from '@/components/analytics'
-import { SettingsPage } from '@/components/settings'
-import { Unlocking } from '@/components/unlocking'
-import { PendingBills } from '@/components/pending-bills'
+import dynamic from 'next/dynamic'
 import { Login } from '@/components/login'
+
+// Dynamic imports to reduce initial bundle size and compilation memory
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center py-20">
+    <div className="animate-spin h-8 w-8 border-3 border-[#7C3AED] border-t-transparent rounded-full" />
+  </div>
+)
+const Dashboard = dynamic(() => import('@/components/dashboard').then(m => ({ default: m.Dashboard })), { ssr: false, loading: LoadingFallback })
+const Billing = dynamic(() => import('@/components/billing').then(m => ({ default: m.Billing })), { ssr: false, loading: LoadingFallback })
+const Analytics = dynamic(() => import('@/components/analytics').then(m => ({ default: m.Analytics })), { ssr: false, loading: LoadingFallback })
+const SettingsPage = dynamic(() => import('@/components/settings').then(m => ({ default: m.SettingsPage })), { ssr: false, loading: LoadingFallback })
+const Unlocking = dynamic(() => import('@/components/unlocking').then(m => ({ default: m.Unlocking })), { ssr: false, loading: LoadingFallback })
+const PendingBills = dynamic(() => import('@/components/pending-bills').then(m => ({ default: m.PendingBills })), { ssr: false, loading: LoadingFallback })
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useTheme } from 'next-themes'
