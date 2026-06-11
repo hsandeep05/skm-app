@@ -100,9 +100,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Set session cookie
+    // Note: Don't use 'secure' flag since the sandbox proxy uses HTTP
     response.cookies.set('session_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       expires: expiresAt,
       path: '/',
