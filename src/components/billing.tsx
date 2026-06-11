@@ -78,6 +78,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
   const [saving, setSaving] = useState(false)
   const [visibleCostPrices, setVisibleCostPrices] = useState<Set<string>>(new Set())
   const [showMobilePreview, setShowMobilePreview] = useState(false)
+  const [selectedService, setSelectedService] = useState('')
   const { emitChange } = useRealtime()
   const { toast } = useToast()
 
@@ -152,6 +153,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
     setDiscount(0)
     setAmountPaid(0)
     setTotalPaidChecked(false)
+    setSelectedService('')
   }, [])
 
   const saveInvoice = async (status: 'pending' | 'completed') => {
@@ -352,7 +354,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
                   </div>
                   <h3 className="text-foreground text-sm font-semibold tracking-tight">Service Catalog</h3>
                 </div>
-                <Select onValueChange={addServiceItem}>
+                <Select value={selectedService} onValueChange={(value) => { addServiceItem(value); setSelectedService(''); }}>
                   <SelectTrigger className="w-full bg-background border-border/70 text-foreground hover:border-[#3B82F6]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-200 h-9">
                     <SelectValue placeholder="Select a service to add..." />
                   </SelectTrigger>
