@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut, Database, Unlock, Plus, Menu, X } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Home, Receipt, BarChart3, Settings, Clock, Sun, Moon, LogOut, Unlock, Plus, Menu, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Login } from '@/components/login'
 
@@ -21,7 +20,6 @@ const PendingBills = dynamic(() => import('@/components/pending-bills').then(m =
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useTheme } from 'next-themes'
-import { performAutoBackup, smartSync, loadBackupFromLocal } from '@/lib/data-persistence'
 
 type TabId = 'dashboard' | 'pending' | 'billing' | 'unlocking' | 'analytics' | 'settings'
 
@@ -56,12 +54,6 @@ const mobileBottomTabs: TabConfig[] = [
   { id: 'analytics', label: 'Reports', icon: <BarChart3 className="h-5 w-5" /> },
 ]
 
-const tabContentVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-}
-
 export default function SriKrishnaApp() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard')
   const [pendingCount, setPendingCount] = useState(0)
@@ -76,59 +68,7 @@ export default function SriKrishnaApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
 
-  // Data persistence state
-  const [restoringData, setRestoringData] = useState(false)
-  const [restoreStatus, setRestoreStatus] = useState<string | null>(null)
-  const backupTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Auto-backup: runs periodically and after data changes
-  const triggerAutoBackup = useCallback(() => {
-    if (backupTimerRef.current) clearTimeout(backupTimerRef.current)
-    backupTimerRef.current = setTimeout(() => {
-      performAutoBackup().catch(() => {})
-    }, 2000)
-  }, [])
-
-  // Auto-backup every 5 minutes
-  useEffect(() => {
-    if (!user) return
-    const interval = setInterval(() => {
-      performAutoBackup().catch(() => {})
-    }, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [user])
-
-  // Smart sync on app startup: detect data loss and auto-restore
-  useEffect(() => {
-    if (!user) return
-
-    const checkAndRestore = async () => {
-      try {
-        const localBackup = loadBackupFromLocal()
-        if (!localBackup) {
-          await performAutoBackup()
-          return
-        }
-
-        const result = await smartSync()
-        if (result.restored) {
-          setRestoringData(true)
-          setRestoreStatus(`Data recovered! ${result.invoiceCount} invoices and ${result.userCount} users restored.`)
-          setTimeout(() => {
-            setRestoringData(false)
-            setRestoreStatus(null)
-          }, 5000)
-        }
-      } catch (err) {
-        console.error('Auto-restore check failed:', err)
-        await performAutoBackup()
-      }
-    }
-
-    checkAndRestore()
-  }, [user])
-
-  // Check session on mount
+  // Check session on mount - single API call
   useEffect(() => {
     fetch('/api/auth/session')
       .then(res => res.json())
@@ -141,8 +81,11 @@ export default function SriKrishnaApp() {
       .finally(() => setAuthLoading(false))
   }, [])
 
-  // Load shop settings on mount
+  // Load shop settings and pending count after login
   useEffect(() => {
+    if (!user) return
+
+    // Load shop settings
     fetch('/api/shop-settings')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -156,7 +99,23 @@ export default function SriKrishnaApp() {
         }
       })
       .catch(() => {})
-  }, [])
+
+    // Load pending count
+    fetch('/api/invoices?status=pending')
+      .then(res => res.ok ? res.json() : { invoices: [] })
+      .then(data => setPendingCount(data.invoices?.length || 0))
+      .catch(() => {})
+  }, [user])
+
+  // Refresh pending count when switching tabs
+  useEffect(() => {
+    if (user && activeTab !== 'dashboard') {
+      fetch('/api/invoices?status=pending')
+        .then(res => res.ok ? res.json() : { invoices: [] })
+        .then(data => setPendingCount(data.invoices?.length || 0))
+        .catch(() => {})
+    }
+  }, [activeTab, user])
 
   // Listen for pending count updates from Dashboard
   useEffect(() => {
@@ -166,26 +125,6 @@ export default function SriKrishnaApp() {
     window.addEventListener('pending-count', handler as EventListener)
     return () => window.removeEventListener('pending-count', handler as EventListener)
   }, [])
-
-  // Also fetch pending count on mount
-  useEffect(() => {
-    if (user) {
-      fetch('/api/invoices?status=pending')
-        .then(res => res.ok ? res.json() : { invoices: [] })
-        .then(data => setPendingCount(data.invoices?.length || 0))
-        .catch(() => {})
-    }
-  }, [user])
-
-  // Refresh pending count when switching tabs
-  useEffect(() => {
-    if (user) {
-      fetch('/api/invoices?status=pending')
-        .then(res => res.ok ? res.json() : { invoices: [] })
-        .then(data => setPendingCount(data.invoices?.length || 0))
-        .catch(() => {})
-    }
-  }, [activeTab, user])
 
   // Close mobile menu when switching tabs
   const handleTabChange = useCallback((tabId: TabId) => {
@@ -229,14 +168,9 @@ export default function SriKrishnaApp() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-          className="h-16 w-16 rounded-2xl overflow-hidden shadow-xl ring-2 ring-[#7C3AED]/20"
-        >
+        <div className="h-16 w-16 rounded-2xl overflow-hidden shadow-xl ring-2 ring-[#7C3AED]/20">
           <img src="/logo.png" alt="Sri Krishna Mobiles" className="h-full w-full object-contain" />
-        </motion.div>
+        </div>
         <div className="animate-spin h-6 w-6 border-3 border-[#7C3AED] border-t-transparent rounded-full" />
       </div>
     )
@@ -331,52 +265,44 @@ export default function SriKrishnaApp() {
       </header>
 
       {/* Mobile Hamburger Menu Dropdown */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="md:hidden fixed top-[60px] right-3 z-[60] w-52 bg-card/95 backdrop-blur-xl rounded-xl border border-border/60 shadow-xl shadow-black/10 overflow-hidden"
-          >
-            <div className="p-1.5">
-              {/* Settings */}
-              <button
-                onClick={() => handleTabChange('settings')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === 'settings'
-                    ? 'bg-[#7C3AED]/15 text-[#7C3AED]'
-                    : 'text-foreground hover:bg-muted/80'
-                }`}
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </button>
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed top-[60px] right-3 z-[60] w-52 bg-card/95 backdrop-blur-xl rounded-xl border border-border/60 shadow-xl shadow-black/10 overflow-hidden">
+          <div className="p-1.5">
+            {/* Settings */}
+            <button
+              onClick={() => handleTabChange('settings')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'settings'
+                  ? 'bg-[#7C3AED]/15 text-[#7C3AED]'
+                  : 'text-foreground hover:bg-muted/80'
+              }`}
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </button>
 
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted/80 transition-all duration-200"
-              >
-                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-              </button>
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted/80 transition-all duration-200"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </button>
 
-              <div className="my-1 mx-2 h-px bg-border/60" />
+            <div className="my-1 mx-2 h-px bg-border/60" />
 
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Click outside to close mobile menu */}
       {mobileMenuOpen && (
@@ -386,46 +312,9 @@ export default function SriKrishnaApp() {
         />
       )}
 
-      {/* Data Restore Notification */}
-      <AnimatePresence>
-        {(restoringData || restoreStatus) && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] max-w-md w-[90%]"
-          >
-            <div className="bg-[#10B981]/95 backdrop-blur-sm text-white rounded-xl px-4 py-3 shadow-xl shadow-[#10B981]/20 flex items-center gap-3 border border-[#10B981]/30">
-              {restoringData ? (
-                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full flex-shrink-0" />
-              ) : (
-                <Database className="h-5 w-5 flex-shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{restoringData ? 'Restoring Data...' : 'Data Recovered!'}</p>
-                {restoreStatus && !restoringData && (
-                  <p className="text-xs text-white/80 mt-0.5">{restoreStatus}</p>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            variants={tabContentVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
+        {renderContent()}
       </main>
 
       {/* Sticky Footer - Desktop only */}

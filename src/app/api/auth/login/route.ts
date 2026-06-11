@@ -6,6 +6,52 @@ function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex')
 }
 
+// Default credentials - auto-seed if no users exist
+const DEFAULT_USERNAME = 'SriKrishna'
+const DEFAULT_PASSWORD = 'Krishna@123'
+
+async function ensureDefaultUser() {
+  try {
+    const userCount = await db.user.count()
+    if (userCount === 0) {
+      console.log('[Login] No users found, creating default admin user...')
+      await db.user.create({
+        data: {
+          username: DEFAULT_USERNAME,
+          password: hashPassword(DEFAULT_PASSWORD),
+          role: 'admin',
+          counterName: 'Main Counter',
+        },
+      })
+      console.log('[Login] Default admin user created successfully')
+    }
+  } catch (err: any) {
+    console.error('[Login] Failed to ensure default user:', err.message)
+    // If the User table doesn't exist, try to create it via setup
+    if (err?.message?.includes('no such table') || err?.message?.includes('does not exist')) {
+      try {
+        console.log('[Login] Tables missing, running setup...')
+        // Import and run setup
+        const setupRes = await fetch(new URL('/api/setup', 'http://localhost:3000'), { method: 'POST' })
+        const setupData = await setupRes.json()
+        if (setupData.success) {
+          await db.user.create({
+            data: {
+              username: DEFAULT_USERNAME,
+              password: hashPassword(DEFAULT_PASSWORD),
+              role: 'admin',
+              counterName: 'Main Counter',
+            },
+          })
+          console.log('[Login] Setup complete and default user created')
+        }
+      } catch (setupErr) {
+        console.error('[Login] Setup failed:', setupErr)
+      }
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -15,29 +61,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 })
     }
 
-    // Try to find user - handle case where User table might not exist
-    let user
-    try {
-      user = await db.user.findUnique({ where: { username } })
-    } catch (dbErr: any) {
-      console.error('Login DB error - table may not exist:', dbErr.message)
-      // If the User table doesn't exist, try to auto-setup
-      try {
-        // Check if we need setup
-        const setupRes = await fetch(new URL('/api/setup', request.url), { method: 'POST' })
-        const setupData = await setupRes.json()
-        if (setupData.success) {
-          // Try again after setup
-          user = await db.user.findUnique({ where: { username } })
-        }
-      } catch (setupErr) {
-        console.error('Auto-setup failed:', setupErr)
-      }
+    // Ensure at least the default user exists
+    await ensureDefaultUser()
 
-      if (!user) {
-        return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 })
-      }
-    }
+    // Find user
+    const user = await db.user.findUnique({ where: { username } })
 
     if (!user || user.password !== hashPassword(password)) {
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 })
@@ -57,9 +85,8 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (sessionErr: any) {
-      console.error('Session creation error:', sessionErr.message)
-      // If Session table doesn't exist, try creating it
-      // Session is optional for basic auth - we can still set the cookie
+      console.error('[Login] Session creation error:', sessionErr.message)
+      // Session creation failed - still allow login without persistent session
     }
 
     const response = NextResponse.json({
@@ -83,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error: any) {
-    console.error('Login error:', error)
+    console.error('[Login] Error:', error)
     return NextResponse.json({
       error: 'Login failed',
       detail: error.message || 'Unknown error',
