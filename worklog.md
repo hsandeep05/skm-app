@@ -20,3 +20,27 @@ Stage Summary:
 - Key fix: Build script properly includes Prisma engine binary in standalone output
 - Logo and favicon updated with the user's uploaded logo
 - All lint checks pass, dev server running correctly
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Add This Week / This Month filters to Unlocking tab + Push to GitHub
+
+Work Log:
+- Updated API `/api/unlocking/route.ts` to support `period=week` and `period=month` query params
+  - `period=week`: Calculates Monday-Sunday of current week, filters by date range
+  - `period=month`: Calculates 1st to last day of current month, filters by date range
+- Updated `src/components/unlocking.tsx` frontend:
+  - Added `filterPeriod` state ('today' | 'week' | 'month')
+  - Added quick filter buttons: Today (amber), This Week (purple), This Month (green), Show All
+  - Updated `fetchEntries` to use period-based URLs
+  - Total amount card shows dynamic labels: "Total (This Week)", "Total (This Month)", "Total (date)"
+  - Date picker only visible when "Today" filter is selected
+  - Bottom total bar also shows the active filter period
+- Committed changes with descriptive message
+- GitHub push failed: token expired/invalid
+
+Stage Summary:
+- Unlocking tab now has Today / This Week / This Month / Show All quick filters
+- API confirmed working: period=week and period=month return correct filtered data
+- GitHub push blocked - needs new valid token from user
