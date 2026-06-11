@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
 import { useToast } from '@/hooks/use-toast'
-import { performAutoBackup } from '@/lib/data-persistence'
+import { performAutoBackup, clearBackupFromLocal } from '@/lib/data-persistence'
 
 interface SettingsPageProps {
   currentUser?: {
@@ -231,6 +231,8 @@ export function SettingsPage({ currentUser, onLogout, onLogoChange, onShopSettin
       })
       const data = await res.json()
       if (res.ok) {
+        // IMPORTANT: Clear localStorage backup FIRST so smartSync doesn't restore old data
+        clearBackupFromLocal()
         toast({ title: 'Data Cleared', description: `Deleted ${data.deletedInvoices} invoices. All data reset to zero.` })
         setShowClearConfirm(false)
         setClearAdminPassword('')

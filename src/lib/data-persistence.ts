@@ -172,8 +172,10 @@ export async function performAutoRestore(): Promise<{ success: boolean; restored
 }
 
 /**
- * Smart sync: compare server data with localStorage backup and restore if needed
- * Returns true if a restore was performed
+ * Smart sync: compare server data with localStorage backup
+ * Only saves a fresh backup if server has MORE data (normal case)
+ * NEVER auto-restores old data to server (user may have intentionally cleared it)
+ * Returns true if a backup was refreshed
  */
 export async function smartSync(): Promise<{ restored: boolean; invoiceCount: number; userCount: number }> {
   try {
@@ -181,36 +183,14 @@ export async function smartSync(): Promise<{ restored: boolean; invoiceCount: nu
     const serverBackup = await fetchFullBackupFromServer()
     const localBackup = loadBackupFromLocal()
 
-    if (!localBackup) {
-      // No local backup, nothing to restore from
-      return { restored: false, invoiceCount: 0, userCount: 0 }
-    }
-
     if (!serverBackup) {
       // Can't reach server, skip
       return { restored: false, invoiceCount: 0, userCount: 0 }
     }
 
-    // Check if server has less data than local backup
-    const serverInvoiceCount = serverBackup.invoices.length
-    const localInvoiceCount = localBackup.invoices.length
-    const serverUserCount = serverBackup.users.length
-    const localUserCount = localBackup.users.length
-
-    // If server has significantly less data, it was likely reset
-    if (localInvoiceCount > serverInvoiceCount || localUserCount > serverUserCount) {
-      // Merge: keep all server data + add back any missing from local
-      const result = await restoreBackupToServer(localBackup)
-      return { 
-        restored: result.success, 
-        invoiceCount: result.restored.invoices, 
-        userCount: result.restored.users 
-      }
-    }
-
-    // Server is up to date, just refresh the local backup
+    // Always refresh local backup from server (server is source of truth)
     saveBackupToLocal(serverBackup)
-    return { restored: false, invoiceCount: serverInvoiceCount, userCount: serverUserCount }
+    return { restored: false, invoiceCount: serverBackup.invoices.length, userCount: serverBackup.users.length }
   } catch {
     return { restored: false, invoiceCount: 0, userCount: 0 }
   }
