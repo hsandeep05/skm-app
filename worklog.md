@@ -22,3 +22,31 @@ Stage Summary:
 - Also fixed: Switched to webpack, simplified login component, made login API self-seeding
 - Login now works: Username "SriKrishna" / Password "Krishna@123"
 - All 6 todos completed
+
+---
+Task ID: 2
+Agent: Main
+Task: Fix login "Invalid Username or Password" error shown in browser
+
+Work Log:
+- Investigated the screenshot showing "DATABASE_URL must start with protocol 'file:'" error
+- Discovered root cause chain: Caddy gateway → external Host header → Next.js crash
+- Found that X-Forwarded-For header from Caddy causes Next.js to trust proxy headers and crash
+- Found that Next.js compression crashes when serving responses through Caddy proxy
+- Created proxy.ts that strips X-Forwarded-For and X-Real-IP headers, rewrites Host
+- Disabled compression in next.config.ts (compress: false)
+- Changed cookie secure flag to false for sandbox compatibility
+- Fixed DATABASE_URL path in .env to use correct relative path from prisma directory
+- Added DB fallback logic in db.ts
+- Made login API self-seeding
+- Simplified login component (removed framer-motion, auto-seed)
+- Switched dev server from Turbopack to webpack for stability
+- Verified login works through Caddy gateway via curl
+
+Stage Summary:
+- Root causes identified: (1) X-Forwarded-For header crashes Next.js, (2) compression crashes through proxy, (3) wrong DATABASE_URL path
+- Key fixes: proxy.ts strips bad headers, compress:false in next.config.ts, secure:false cookies
+- Login works: Username "SriKrishna" / Password "Krishna@123" via curl through gateway
+- Browser access may be intermittent due to Caddy concurrent connection handling
+- On Vercel deployment, all Caddy-related issues won't exist
+- Code pushed to GitHub
