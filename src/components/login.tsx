@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Receipt, Eye, EyeOff, LogIn } from 'lucide-react'
+import { Eye, EyeOff, LogIn, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,12 +19,14 @@ export function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const [setupError, setSetupError] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Auto-seed the default user if it doesn't exist
   useEffect(() => {
     const autoSeed = async () => {
       setSeeding(true)
+      setSetupError(null)
       try {
         // First try to seed - will only create if no users exist
         const seedRes = await fetch('/api/auth/seed', { method: 'POST' })
@@ -38,10 +40,14 @@ export function Login({ onLogin }: LoginProps) {
           if (setupData.success) {
             console.log('[Login] Setup complete, seeding user...')
             await fetch('/api/auth/seed', { method: 'POST' })
+          } else {
+            console.error('[Login] Setup failed:', setupData.error)
+            setSetupError(setupData.error || 'Database setup failed. Please try again.')
           }
         }
       } catch (err) {
-        // Ignore errors - seed may already exist
+        console.error('[Login] Seed/setup error:', err)
+        setSetupError('Could not connect to server. Please check your connection.')
       } finally {
         setSeeding(false)
       }
@@ -63,6 +69,7 @@ export function Login({ onLogin }: LoginProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setSetupError(null)
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -78,13 +85,44 @@ export function Login({ onLogin }: LoginProps) {
         toast({ title: 'Welcome back!', description: `Logged in as ${data.user.username}` })
         // Trigger auto-backup after login
         performAutoBackup().catch(() => {})
+      } else if (res.status === 500) {
+        // Server error - might be a database issue
+        const errorMsg = data.detail || data.error || 'Server error'
+        toast({
+          title: 'Server Error',
+          description: `${errorMsg}. Please try refreshing the page.`,
+          variant: 'destructive',
+        })
+        setSetupError(`Server error: ${errorMsg}`)
       } else {
+        // Auth error (401, 400)
         toast({ title: 'Login Failed', description: data.error, variant: 'destructive' })
       }
     } catch (err) {
-      toast({ title: 'Error', description: 'Failed to connect to server', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Failed to connect to server. Please check your connection.', variant: 'destructive' })
+      setSetupError('Cannot connect to server')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRetrySetup = async () => {
+    setSeeding(true)
+    setSetupError(null)
+    try {
+      const setupRes = await fetch('/api/setup', { method: 'POST' })
+      const setupData = await setupRes.json()
+      if (setupData.success) {
+        await fetch('/api/auth/seed', { method: 'POST' })
+        setSetupError(null)
+        toast({ title: 'Setup Complete', description: 'Database initialized successfully. You can now log in.' })
+      } else {
+        setSetupError(setupData.error || 'Setup failed')
+      }
+    } catch (err) {
+      setSetupError('Could not connect to server')
+    } finally {
+      setSeeding(false)
     }
   }
 
@@ -140,6 +178,23 @@ export function Login({ onLogin }: LoginProps) {
               <p className="text-muted-foreground text-xs">Enter your credentials to continue</p>
             </div>
           </div>
+
+          {/* Setup Error Banner */}
+          {setupError && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-destructive font-medium">{setupError}</p>
+                <button
+                  onClick={handleRetrySetup}
+                  className="mt-1.5 text-xs text-[#7C3AED] hover:text-[#6D28D9] font-medium flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Retry Setup
+                </button>
+              </div>
+            </div>
+          )}
 
           {seeding ? (
             <div className="flex items-center justify-center py-8">

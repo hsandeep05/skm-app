@@ -1,177 +1,95 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createHash } from 'crypto'
+import { execSync } from 'child_process'
+
+function hashPassword(password: string): string {
+  return createHash('sha256').update(password).digest('hex')
+}
 
 // POST /api/setup - Initialize database schema and seed admin user
-// Uses raw SQL to create tables (works on Vercel serverless)
-// Call this once after deploying to a new environment
+// Uses Prisma db push to create tables (works with both SQLite and PostgreSQL)
 export async function POST() {
   try {
-    console.log('[Setup] Creating database tables...')
+    console.log('[Setup] Pushing database schema...')
 
-    // Create tables using raw SQL (PostgreSQL)
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Invoice" (
-        "id" TEXT NOT NULL,
-        "invoiceId" TEXT NOT NULL,
-        "tempId" TEXT,
-        "syncStatus" TEXT NOT NULL DEFAULT 'synced',
-        "date" TEXT NOT NULL,
-        "customerName" TEXT NOT NULL DEFAULT 'Walk-in Customer',
-        "customerPhone" TEXT,
-        "mobileName" TEXT NOT NULL,
-        "subtotal" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "grandTotal" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "amountPaid" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "balanceDue" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "calculatedNetProfit" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "paymentStatus" TEXT NOT NULL DEFAULT 'Pending',
-        "status" TEXT NOT NULL DEFAULT 'pending',
-        "updatedBy" TEXT NOT NULL DEFAULT 'operator_primary',
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "InvoiceItem" (
-        "id" TEXT NOT NULL,
-        "invoiceId" TEXT NOT NULL,
-        "description" TEXT NOT NULL,
-        "costPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "sellingPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "InvoiceItem_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Counter" (
-        "id" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "value" INTEGER NOT NULL DEFAULT 0,
-        CONSTRAINT "Counter_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "User" (
-        "id" TEXT NOT NULL,
-        "username" TEXT NOT NULL,
-        "password" TEXT NOT NULL,
-        "role" TEXT NOT NULL DEFAULT 'operator',
-        "counterName" TEXT,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Session" (
-        "id" TEXT NOT NULL,
-        "token" TEXT NOT NULL,
-        "userId" TEXT NOT NULL,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "expiresAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Setting" (
-        "id" TEXT NOT NULL,
-        "key" TEXT NOT NULL,
-        "value" TEXT NOT NULL DEFAULT '',
-        CONSTRAINT "Setting_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "UnlockingEntry" (
-        "id" TEXT NOT NULL,
-        "phoneName" TEXT NOT NULL,
-        "customerName" TEXT NOT NULL DEFAULT '',
-        "frpType" TEXT NOT NULL DEFAULT 'Online',
-        "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "date" TEXT NOT NULL,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "UnlockingEntry_pkey" PRIMARY KEY ("id")
-      );
-    `)
-
-    // Create unique indexes (IF NOT EXISTS to be safe)
+    // Use Prisma db push to create/sync tables - works with any database
     try {
-      await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Invoice_invoiceId_key" ON "Invoice"("invoiceId");`)
-    } catch (e) { console.log('[Setup] Invoice invoiceId index may already exist') }
-
-    try {
-      await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "InvoiceItem_invoiceId_idx" ON "InvoiceItem"("invoiceId");`)
-    } catch (e) { console.log('[Setup] InvoiceItem invoiceId index may already exist') }
-
-    try {
-      await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Counter_name_key" ON "Counter"("name");`)
-    } catch (e) { console.log('[Setup] Counter name index may already exist') }
-
-    try {
-      await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username");`)
-    } catch (e) { console.log('[Setup] User username index may already exist') }
-
-    try {
-      await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Session_token_key" ON "Session"("token");`)
-    } catch (e) { console.log('[Setup] Session token index may already exist') }
-
-    try {
-      await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Setting_key_key" ON "Setting"("key");`)
-    } catch (e) { console.log('[Setup] Setting key index may already exist') }
-
-    // Add foreign key for InvoiceItem -> Invoice
-    try {
-      await db.$executeRawUnsafe(`
-        ALTER TABLE "InvoiceItem" DROP CONSTRAINT IF EXISTS "InvoiceItem_invoiceId_fkey";
-        ALTER TABLE "InvoiceItem" ADD CONSTRAINT "InvoiceItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-      `)
-    } catch (e) { console.log('[Setup] InvoiceItem FK may already exist') }
-
-    // Add foreign key for Session -> User
-    try {
-      await db.$executeRawUnsafe(`
-        ALTER TABLE "Session" DROP CONSTRAINT IF EXISTS "Session_userId_fkey";
-        ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-      `)
-    } catch (e) { console.log('[Setup] Session FK may already exist') }
-
-    console.log('[Setup] Tables created successfully')
+      execSync('npx prisma db push --accept-data-loss', {
+        stdio: 'pipe',
+        timeout: 30000,
+      })
+      console.log('[Setup] Schema pushed successfully')
+    } catch (pushErr) {
+      console.error('[Setup] Prisma db push failed, trying direct approach:', pushErr)
+      // If db push fails, try to check if tables already exist
+      try {
+        await db.user.count()
+        console.log('[Setup] Tables already exist, skipping schema push')
+      } catch {
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to create database tables. Please run: npx prisma db push',
+        }, { status: 500 })
+      }
+    }
 
     // Seed the admin user
-    const userCount = await db.user.count()
-    if (userCount === 0) {
-      await db.user.create({
-        data: {
-          username: 'SriKrishna',
-          password: createHash('sha256').update('Krishna@123').digest('hex'),
-          role: 'admin',
-          counterName: 'Main Counter',
-        },
-      })
-      console.log('[Setup] Admin user created')
+    try {
+      const userCount = await db.user.count()
+      if (userCount === 0) {
+        await db.user.create({
+          data: {
+            username: 'SriKrishna',
+            password: hashPassword('Krishna@123'),
+            role: 'admin',
+            counterName: 'Main Counter',
+          },
+        })
+        console.log('[Setup] Admin user created')
+      } else {
+        console.log('[Setup] Users already exist, skipping seed')
+      }
+    } catch (seedErr) {
+      console.error('[Setup] User seed error:', seedErr)
     }
 
     // Seed default settings
-    const shopName = await db.setting.findUnique({ where: { key: 'shopName' } })
-    if (!shopName) {
-      await db.setting.create({
-        data: { key: 'shopName', value: 'Sri Krishna Mobiles' },
-      })
+    try {
+      const shopName = await db.setting.findUnique({ where: { key: 'shopName' } })
+      if (!shopName) {
+        await db.setting.create({
+          data: { key: 'shopName', value: 'Sri Krishna Mobiles' },
+        })
+      }
+
+      const shopAddress = await db.setting.findUnique({ where: { key: 'shopAddress' } })
+      if (!shopAddress) {
+        await db.setting.create({
+          data: { key: 'shopAddress', value: 'Near Chowk Bazar, Main Road, Narayanpet' },
+        })
+      }
+
+      const shopTagline = await db.setting.findUnique({ where: { key: 'shopTagline' } })
+      if (!shopTagline) {
+        await db.setting.create({
+          data: { key: 'shopTagline', value: 'Your Trusted Mobile Service Center' },
+        })
+      }
+    } catch (settingErr) {
+      console.error('[Setup] Settings seed error:', settingErr)
     }
 
-    const invoiceCounter = await db.counter.findUnique({ where: { name: 'invoice' } })
-    if (!invoiceCounter) {
-      await db.counter.create({
-        data: { name: 'invoice', value: 0 },
-      })
+    // Seed invoice counter
+    try {
+      const invoiceCounter = await db.counter.findUnique({ where: { name: 'invoice' } })
+      if (!invoiceCounter) {
+        await db.counter.create({
+          data: { name: 'invoice', value: 0 },
+        })
+      }
+    } catch (counterErr) {
+      console.error('[Setup] Counter seed error:', counterErr)
     }
 
     return NextResponse.json({
