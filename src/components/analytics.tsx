@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
+// ScrollArea removed - using native CSS overflow for better mobile scroll support
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -406,9 +406,9 @@ export function Analytics() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.3 }}
       >
-        <div className="relative overflow-hidden rounded-2xl border border-[#10B981]/25 bg-card">
+        <div className="relative rounded-2xl border border-[#10B981]/25 bg-card">
           {/* Left accent bar */}
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399] rounded-l-2xl" />
 
           {/* Subtle background glow */}
           <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
@@ -443,14 +443,22 @@ export function Analytics() {
                 <p className="text-xs opacity-70">Create and finalize your first bill!</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-[600px]">
+              <div
+                className="overflow-y-auto max-h-[50vh] sm:max-h-[60vh] md:max-h-[70vh] lg:max-h-[75vh] pr-1
+                           scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent
+                           [-webkit-overflow-scrolling:touch]"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(120,120,120,0.2) transparent',
+                }}
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {completedBills.map((bill: any, idx: number) => (
                     <motion.div
                       key={bill.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.03 }}
+                      transition={{ delay: Math.min(idx * 0.03, 0.5) }}
                       className="relative bg-background rounded-xl p-4 border border-border
                                   hover:border-[#10B981]/30 transition-all duration-200 group"
                     >
@@ -467,7 +475,7 @@ export function Analytics() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                           onClick={() => handleViewInvoice(bill)}
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -504,7 +512,7 @@ export function Analytics() {
                     </motion.div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </div>
         </div>
