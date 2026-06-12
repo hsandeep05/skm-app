@@ -38,10 +38,10 @@ export async function POST() {
   } catch (error: any) {
     console.error('Seed error:', error)
 
-    // If table doesn't exist, tell the client to run setup first
-    if (error?.message?.includes('does not exist') || error?.code === '42P01' || error?.message?.includes('no such table')) {
+    // If collection doesn't exist or connection issue, tell the client to run setup first
+    if (error?.message?.includes('does not exist') || error?.code === '42P01' || error?.message?.includes('no such table') || error?.message?.includes('collection')) {
       return NextResponse.json({
-        error: 'Database tables not found. Please run setup first: POST /api/setup',
+        error: 'Database not accessible. Please run setup first: POST /api/setup',
         needsSetup: true,
       }, { status: 503 })
     }

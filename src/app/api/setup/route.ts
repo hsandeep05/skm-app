@@ -6,28 +6,21 @@ function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex')
 }
 
-// POST /api/setup - Initialize database schema and seed admin user
-// Works with both local SQLite and Turso (libSQL) cloud database
+// POST /api/setup - Initialize database and seed admin user
+// Works with MongoDB Atlas
 export async function POST() {
   try {
-    console.log('[Setup] Checking database tables...')
+    console.log('[Setup] Checking database connection...')
 
-    // Check if tables exist by trying to query them
-    let tablesExist = false
+    // Verify database connection
     try {
-      await db.user.count()
-      tablesExist = true
-    } catch {
-      console.log('[Setup] Tables do not exist yet')
-    }
-
-    if (!tablesExist) {
-      // On Vercel with Turso, tables should be created via `prisma db push` before deployment
-      // On local dev, we can try to push the schema
+      await db.$connect()
+      console.log('[Setup] Database connection verified')
+    } catch (connectErr) {
+      console.error('[Setup] Database connection failed:', connectErr)
       return NextResponse.json({
         success: false,
-        error: 'Database tables not found. If deploying on Vercel, make sure to run `prisma db push` with the Turso database URL before deploying. For local development, run: npx prisma db push',
-        needsDbPush: true,
+        error: 'Failed to connect to database. Check your DATABASE_URL environment variable.',
       }, { status: 500 })
     }
 
@@ -91,7 +84,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: 'Database setup complete! Tables verified and admin user seeded.',
+      message: 'Database setup complete! Connection verified and admin user seeded.',
       credentials: { username: 'SriKrishna', password: 'Krishna@123' },
     })
   } catch (error: any) {
@@ -118,7 +111,7 @@ export async function GET() {
     return NextResponse.json({
       setup: false,
       error: error.message || 'Database not accessible',
-      hint: 'POST /api/setup to create tables and seed data',
+      hint: 'POST /api/setup to verify connection and seed data',
     })
   }
 }

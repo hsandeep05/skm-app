@@ -63,6 +63,7 @@ export async function PUT(
         paymentStatus,
         status,
         updatedBy,
+        updatedAt: new Date(),
         items: {
           create: items?.map((item: any) => ({
             description: item.description,

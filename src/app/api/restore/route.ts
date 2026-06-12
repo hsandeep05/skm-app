@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
                 role: user.role || existingUser.role,
                 counterName: user.counterName || existingUser.counterName,
                 password: user.password || existingUser.password,
+                updatedAt: new Date(),
               },
             })
             restoredUsers++
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
                 calculatedNetProfit: inv.calculatedNetProfit || 0,
                 paymentStatus: inv.paymentStatus || 'Pending',
                 status: inv.status || 'pending',
+                updatedAt: new Date(),
               },
             })
             restoredInvoices++

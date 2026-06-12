@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 model Invoice {
-  id             String   @id @default(cuid())
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
   invoiceId      String   @unique
   tempId         String?
   syncStatus     String   @default("synced")
@@ -26,61 +26,61 @@ model Invoice {
   status         String   @default("pending")
   updatedBy      String   @default("operator_primary")
   createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime @default(now())
 
   items          InvoiceItem[]
 }
 
 model InvoiceItem {
-  id            String   @id @default(cuid())
-  invoiceId     String
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId     String   @db.ObjectId
   description   String
   costPrice     Float    @default(0)
   sellingPrice  Float    @default(0)
   createdAt     DateTime @default(now())
 
-  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
 }
 
 model Counter {
-  id    String @id @default(cuid())
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
   name  String @unique
   value Int    @default(0)
 }
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  role      String   @default("operator")
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  username    String   @unique
+  password    String
+  role        String   @default("operator")
   counterName String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
 
-  sessions  Session[]
+  sessions    Session[]
 }
 
 model Session {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
 
 model Setting {
-  id    String @id @default(cuid())
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
   key   String @unique
   value String @default("")
 }
 
 model UnlockingEntry {
-  id            String   @id @default(cuid())
-  phoneName     String
-  customerName  String   @default("")
-  frpType       String   @default("Online")
-  amount        Float    @default(0)
-  date          String
-  createdAt     DateTime @default(now())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  phoneName    String
+  customerName String   @default("")
+  frpType      String   @default("Online")
+  amount       Float    @default(0)
+  date         String
+  createdAt    DateTime @default(now())
 }

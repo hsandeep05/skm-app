@@ -7,8 +7,8 @@ export async function GET() {
   try {
     // Try DB check but don't block on it
     const { db } = await import('@/lib/db')
-    await db.$queryRaw`SELECT 1`
-    
+    await db.$connect()
+
     return NextResponse.json({
       status: 'ok',
       db: 'connected',
