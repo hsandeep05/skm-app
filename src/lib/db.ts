@@ -17,6 +17,11 @@ function createPrismaClient() {
   if (tursoUrl && (tursoUrl.startsWith('libsql://') || tursoUrl.startsWith('http://') || tursoUrl.startsWith('https://'))) {
     console.log('[DB] Using Turso/libSQL cloud database:', tursoUrl.substring(0, 30) + '...')
 
+    // CRITICAL: Prisma validates DATABASE_URL even when using an adapter.
+    // We must override it with a valid SQLite URL before creating PrismaClient.
+    // The adapter handles the actual database connection.
+    process.env.DATABASE_URL = 'file:./dev.db'
+
     if (!tursoAuthToken) {
       console.error('[DB] WARNING: DATABASE_AUTH_TOKEN is not set! Turso requires an auth token.')
     }
@@ -28,9 +33,6 @@ function createPrismaClient() {
     const adapter = new PrismaLibSql(libsql)
     return new PrismaClient({
       adapter,
-      // Override DATABASE_URL with a valid SQLite URL so Prisma validation passes
-      // The adapter handles the actual database connection, this is just for Prisma internals
-      datasourceUrl: 'file:./dev.db',
       log: ['error', 'warn'],
     })
   }
@@ -39,6 +41,9 @@ function createPrismaClient() {
   if (dbUrl.startsWith('libsql://') || dbUrl.startsWith('http://') || dbUrl.startsWith('https://')) {
     console.log('[DB] Using Turso/libSQL via DATABASE_URL:', dbUrl.substring(0, 30) + '...')
 
+    // Override DATABASE_URL for Prisma validation
+    process.env.DATABASE_URL = 'file:./dev.db'
+
     const libsql = createClient({
       url: dbUrl,
       authToken: tursoAuthToken,
@@ -46,7 +51,6 @@ function createPrismaClient() {
     const adapter = new PrismaLibSql(libsql)
     return new PrismaClient({
       adapter,
-      datasourceUrl: 'file:./dev.db',
       log: ['error', 'warn'],
     })
   }
