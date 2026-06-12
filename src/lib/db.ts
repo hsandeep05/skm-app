@@ -1,6 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSql } from '@prisma/adapter-libsql'
-import { createClient } from '@libsql/client'
 import { existsSync, mkdirSync } from 'fs'
 import { resolve } from 'path'
 
@@ -18,13 +16,18 @@ function createPrismaClient() {
     console.log('[DB] Using Turso/libSQL cloud database:', tursoUrl.substring(0, 30) + '...')
 
     // CRITICAL: Prisma validates DATABASE_URL even when using an adapter.
-    // We must override it with a valid SQLite URL before creating PrismaClient.
-    // The adapter handles the actual database connection.
+    // Override with a valid SQLite URL before creating PrismaClient.
     process.env.DATABASE_URL = 'file:./dev.db'
 
     if (!tursoAuthToken) {
-      console.error('[DB] WARNING: DATABASE_AUTH_TOKEN is not set! Turso requires an auth token.')
+      console.error('[DB] WARNING: DATABASE_AUTH_TOKEN is not set!')
     }
+
+    // Dynamic imports to avoid build-time evaluation
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createClient } = require('@libsql/client')
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaLibSql } = require('@prisma/adapter-libsql')
 
     const libsql = createClient({
       url: tursoUrl,
@@ -37,12 +40,16 @@ function createPrismaClient() {
     })
   }
 
-  // Also check if DATABASE_URL itself is a libsql URL (backward compat)
+  // Also check if DATABASE_URL itself is a libsql URL
   if (dbUrl.startsWith('libsql://') || dbUrl.startsWith('http://') || dbUrl.startsWith('https://')) {
     console.log('[DB] Using Turso/libSQL via DATABASE_URL:', dbUrl.substring(0, 30) + '...')
 
-    // Override DATABASE_URL for Prisma validation
     process.env.DATABASE_URL = 'file:./dev.db'
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createClient } = require('@libsql/client')
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaLibSql } = require('@prisma/adapter-libsql')
 
     const libsql = createClient({
       url: dbUrl,
@@ -80,14 +87,34 @@ function createPrismaClient() {
   })
 }
 
-// Use global singleton to prevent hot-reload creating multiple clients
-export const db = globalForPrisma.prisma ?? createPrismaClient()
+// Lazy initialization - only create PrismaClient when first accessed
+// This prevents build-time connection errors on Vercel
+let _db: PrismaClient | undefined = undefined
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = db
+export function getDb(): PrismaClient {
+  if (!_db) {
+    if (globalForPrisma.prisma) {
+      _db = globalForPrisma.prisma
+    } else {
+      _db = createPrismaClient()
+      if (process.env.NODE_ENV !== 'production') {
+        globalForPrisma.prisma = _db
+      }
+    }
+  }
+  return _db
 }
+
+// For backward compatibility - export db as a getter
+export const db = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    return (getDb() as any)[prop]
+  },
+})
 
 // Graceful shutdown
 process.on('beforeExit', async () => {
-  await db.$disconnect().catch(() => {})
+  if (_db) {
+    await _db.$disconnect().catch(() => {})
+  }
 })
