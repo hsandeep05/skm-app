@@ -13,10 +13,18 @@ function createPrismaClient() {
 
   // If using Turso/libSQL cloud database (for Vercel deployment)
   if (dbUrl.startsWith('libsql://') || dbUrl.startsWith('http://') || dbUrl.startsWith('https://')) {
-    console.log('[DB] Using Turso/libSQL cloud database')
+    console.log('[DB] Using Turso/libSQL cloud database:', dbUrl.substring(0, 30) + '...')
+
+    const authToken = process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || ''
+    console.log('[DB] Auth token present:', !!authToken, 'length:', authToken.length)
+
+    if (!authToken) {
+      console.error('[DB] WARNING: DATABASE_AUTH_TOKEN is not set! Turso requires an auth token.')
+    }
+
     const libsql = createClient({
       url: dbUrl,
-      authToken: process.env.DATABASE_AUTH_TOKEN || '',
+      authToken,
     })
     const adapter = new PrismaLibSql(libsql)
     return new PrismaClient({
