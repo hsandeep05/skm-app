@@ -27,28 +27,8 @@ async function ensureDefaultUser() {
     }
   } catch (err: any) {
     console.error('[Login] Failed to ensure default user:', err.message)
-    // If the User table doesn't exist, try to create it via setup
-    if (err?.message?.includes('no such table') || err?.message?.includes('does not exist')) {
-      try {
-        console.log('[Login] Tables missing, running setup...')
-        // Import and run setup
-        const setupRes = await fetch(new URL('/api/setup', 'http://localhost:3000'), { method: 'POST' })
-        const setupData = await setupRes.json()
-        if (setupData.success) {
-          await db.user.create({
-            data: {
-              username: DEFAULT_USERNAME,
-              password: hashPassword(DEFAULT_PASSWORD),
-              role: 'admin',
-              counterName: 'Main Counter',
-            },
-          })
-          console.log('[Login] Setup complete and default user created')
-        }
-      } catch (setupErr) {
-        console.error('[Login] Setup failed:', setupErr)
-      }
-    }
+    // Don't try to call setup endpoint - just log the error
+    // Tables might not exist yet
   }
 }
 
@@ -100,10 +80,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Set session cookie
-    // Note: Don't use 'secure' flag since the sandbox proxy uses HTTP
+    // Use secure flag based on environment (Vercel uses HTTPS, sandbox uses HTTP)
+    const isProduction = process.env.VERCEL === '1'
     response.cookies.set('session_token', token, {
       httpOnly: true,
-      secure: false,
+      secure: isProduction,
       sameSite: 'lax',
       expires: expiresAt,
       path: '/',

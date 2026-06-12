@@ -1,37 +1,34 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createHash } from 'crypto'
-import { execSync } from 'child_process'
 
 function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex')
 }
 
 // POST /api/setup - Initialize database schema and seed admin user
-// Uses Prisma db push to create tables (works with both SQLite and PostgreSQL)
+// Works with both local SQLite and Turso (libSQL) cloud database
 export async function POST() {
   try {
-    console.log('[Setup] Pushing database schema...')
+    console.log('[Setup] Checking database tables...')
 
-    // Use Prisma db push to create/sync tables - works with any database
+    // Check if tables exist by trying to query them
+    let tablesExist = false
     try {
-      execSync('npx prisma db push --accept-data-loss', {
-        stdio: 'pipe',
-        timeout: 30000,
-      })
-      console.log('[Setup] Schema pushed successfully')
-    } catch (pushErr) {
-      console.error('[Setup] Prisma db push failed, trying direct approach:', pushErr)
-      // If db push fails, try to check if tables already exist
-      try {
-        await db.user.count()
-        console.log('[Setup] Tables already exist, skipping schema push')
-      } catch {
-        return NextResponse.json({
-          success: false,
-          error: 'Failed to create database tables. Please run: npx prisma db push',
-        }, { status: 500 })
-      }
+      await db.user.count()
+      tablesExist = true
+    } catch {
+      console.log('[Setup] Tables do not exist yet')
+    }
+
+    if (!tablesExist) {
+      // On Vercel with Turso, tables should be created via `prisma db push` before deployment
+      // On local dev, we can try to push the schema
+      return NextResponse.json({
+        success: false,
+        error: 'Database tables not found. If deploying on Vercel, make sure to run `prisma db push` with the Turso database URL before deploying. For local development, run: npx prisma db push',
+        needsDbPush: true,
+      }, { status: 500 })
     }
 
     // Seed the admin user
@@ -94,7 +91,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: 'Database setup complete! Tables created and admin user seeded.',
+      message: 'Database setup complete! Tables verified and admin user seeded.',
       credentials: { username: 'SriKrishna', password: 'Krishna@123' },
     })
   } catch (error: any) {
