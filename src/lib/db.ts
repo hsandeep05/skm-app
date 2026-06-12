@@ -9,7 +9,6 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  // Check for Turso cloud database URL (separate from DATABASE_URL which Prisma uses internally)
   const tursoUrl = process.env.TURSO_DATABASE_URL || ''
   const tursoAuthToken = process.env.DATABASE_AUTH_TOKEN || ''
   const dbUrl = process.env.DATABASE_URL || ''
@@ -17,6 +16,12 @@ function createPrismaClient() {
   // If Turso URL is set, use the LibSQL adapter (for Vercel/cloud deployment)
   if (tursoUrl && (tursoUrl.startsWith('libsql://') || tursoUrl.startsWith('http://') || tursoUrl.startsWith('https://'))) {
     console.log('[DB] Using Turso/libSQL cloud database:', tursoUrl.substring(0, 30) + '...')
+
+    // Prisma still requires DATABASE_URL to be set even with an adapter
+    // Set a dummy file URL so Prisma's internal validation passes
+    if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.startsWith('file:')) {
+      process.env.DATABASE_URL = 'file:./dev.db'
+    }
 
     if (!tursoAuthToken) {
       console.error('[DB] WARNING: DATABASE_AUTH_TOKEN is not set! Turso requires an auth token.')
@@ -36,6 +41,9 @@ function createPrismaClient() {
   // Also check if DATABASE_URL itself is a libsql URL (backward compat)
   if (dbUrl.startsWith('libsql://') || dbUrl.startsWith('http://') || dbUrl.startsWith('https://')) {
     console.log('[DB] Using Turso/libSQL via DATABASE_URL:', dbUrl.substring(0, 30) + '...')
+
+    // Set a dummy file URL for Prisma validation
+    process.env.DATABASE_URL = 'file:./dev.db'
 
     const libsql = createClient({
       url: dbUrl,
