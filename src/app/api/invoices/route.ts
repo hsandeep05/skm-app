@@ -6,6 +6,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
 
     const where: any = {}
     if (status && status !== 'all') {
@@ -19,13 +23,39 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    // Date range filter
+    if (startDate && endDate) {
+      if (startDate === endDate) {
+        where.date = startDate
+      } else {
+        where.date = { gte: startDate, lte: endDate }
+      }
+    } else if (startDate) {
+      where.date = { gte: startDate }
+    }
+
+    // Get total count for pagination
+    const total = await db.invoice.count({ where })
+
+    // Get paginated invoices
     const invoices = await db.invoice.findMany({
       where,
       include: { items: true },
       orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
     })
 
-    return NextResponse.json({ invoices })
+    return NextResponse.json({
+      invoices,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
+    })
   } catch (error) {
     console.error('Error fetching invoices:', error)
     return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 })
@@ -60,7 +90,6 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Generate sequential invoice ID with counter sync safety
-    // Fetch all SRI invoice IDs and find the max numeric value
     const existingInvoices = await db.invoice.findMany({
       where: { invoiceId: { startsWith: 'SRI' } },
       select: { invoiceId: true },

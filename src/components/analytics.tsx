@@ -1,15 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
-import { DollarSign, TrendingUp, Clock, BarChart3, CheckCircle, Eye, FileText, Receipt } from 'lucide-react'
+import { DollarSign, TrendingUp, Clock, BarChart3, CheckCircle, Eye, FileText, Receipt, ChevronDown, Loader2, Calendar, Filter } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-// ScrollArea removed - using native CSS overflow for better mobile scroll support
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,8 +16,11 @@ import {
 } from '@/components/ui/dialog'
 import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 
+type DateRange = 'today' | 'week' | 'month' | 'all'
+
 interface AnalyticsData {
   date: string
+  range: string
   totalGrossSales: number
   totalCashCollected: number
   totalOutstanding: number
@@ -32,6 +32,14 @@ interface AnalyticsData {
     profit: number
     count: number
   }[]
+}
+
+interface Pagination {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasMore: boolean
 }
 
 function formatCurrency(amount: number): string {
@@ -70,7 +78,6 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Subtle accent gradient overlay on the card */}
         <div
           className="absolute inset-0 pointer-events-none transition-opacity duration-500"
           style={{
@@ -78,8 +85,6 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
             background: `linear-gradient(135deg, ${accentColor}08 0%, transparent 60%)`,
           }}
         />
-
-        {/* Subtle dot pattern overlay for visual texture */}
         <div
           className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
           style={{
@@ -87,16 +92,12 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
             backgroundSize: '16px 16px',
           }}
         />
-
-        {/* Radial glow from top-right corner */}
         <div
           className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
           style={{
             background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
           }}
         />
-
-        {/* Left-side color bar */}
         <div
           className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
           style={{
@@ -117,7 +118,6 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
                 {value}
               </p>
             </div>
-            {/* Circular icon with glow */}
             <div
               className="relative h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0
                           transition-all duration-300"
@@ -129,7 +129,6 @@ function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 
                   : 'none',
               }}
             >
-              {/* Inner ring */}
               <div
                 className="absolute inset-[2px] rounded-full border transition-colors duration-300"
                 style={{ borderColor: `${accentColor}${hovered ? '35' : '20'}` }}
@@ -160,11 +159,20 @@ function CustomTooltip({ active, payload, label }: any) {
   return null
 }
 
+const RANGE_OPTIONS: { value: DateRange; label: string; icon: React.ReactNode }[] = [
+  { value: 'today', label: 'Today', icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: 'week', label: 'This Week', icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: 'month', label: 'This Month', icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: 'all', label: 'All Time', icon: <BarChart3 className="h-3.5 w-3.5" /> },
+]
+
 export function Analytics() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [dateRange, setDateRange] = useState<DateRange>('today')
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [completedBills, setCompletedBills] = useState<any[]>([])
+  const [billsLoading, setBillsLoading] = useState(false)
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0, hasMore: false })
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
@@ -173,7 +181,7 @@ export function Analytics() {
   const fetchAnalytics = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/analytics?date=${selectedDate}`)
+      const res = await fetch(`/api/analytics?range=${dateRange}`)
       if (res.ok) {
         const json = await res.json()
         setData(json)
@@ -183,19 +191,52 @@ export function Analytics() {
     } finally {
       setLoading(false)
     }
-  }, [selectedDate])
+  }, [dateRange])
 
-  const fetchCompletedBills = useCallback(async () => {
+  const fetchCompletedBills = useCallback(async (page: number, append: boolean = false) => {
+    if (!append) setBillsLoading(true)
     try {
-      const res = await fetch('/api/invoices?status=completed')
+      // Calculate date range for filtering bills
+      const now = new Date()
+      let startDate = ''
+      let endDate = ''
+
+      if (dateRange === 'today') {
+        startDate = now.toISOString().split('T')[0]
+        endDate = startDate
+      } else if (dateRange === 'week') {
+        const dayOfWeek = now.getDay()
+        const monday = new Date(now)
+        monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+        startDate = monday.toISOString().split('T')[0]
+        endDate = now.toISOString().split('T')[0]
+      } else if (dateRange === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+        endDate = now.toISOString().split('T')[0]
+      }
+      // 'all' = no date filter
+
+      let url = `/api/invoices?status=completed&page=${page}&limit=10`
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`
+      }
+
+      const res = await fetch(url)
       if (res.ok) {
         const json = await res.json()
-        setCompletedBills(json.invoices || [])
+        if (append) {
+          setCompletedBills(prev => [...prev, ...(json.invoices || [])])
+        } else {
+          setCompletedBills(json.invoices || [])
+        }
+        setPagination(json.pagination || { page, limit: 10, total: 0, totalPages: 0, hasMore: false })
       }
     } catch (err) {
       console.error('Failed to fetch completed bills:', err)
+    } finally {
+      setBillsLoading(false)
     }
-  }, [])
+  }, [dateRange])
 
   // Load shop logo & settings
   useEffect(() => {
@@ -214,8 +255,13 @@ export function Analytics() {
   }, [fetchAnalytics])
 
   useEffect(() => {
-    fetchCompletedBills()
+    fetchCompletedBills(1, false)
   }, [fetchCompletedBills])
+
+  const handleLoadMore = () => {
+    const nextPage = pagination.page + 1
+    fetchCompletedBills(nextPage, true)
+  }
 
   const handleViewInvoice = (bill: any) => {
     const invoiceData: InvoiceData = {
@@ -294,22 +340,42 @@ export function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Date Picker */}
-      <div className="flex items-end gap-3">
-        <div className="flex-1 max-w-xs">
-          <Label className="text-muted-foreground text-xs font-medium">Select Date</Label>
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-background border-border text-foreground focus:border-[#7C3AED] h-9"
-          />
+    <div className="space-y-4 sm:space-y-6">
+      {/* Date Range Filter */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="rounded-2xl border border-[#7C3AED]/20 bg-card overflow-hidden">
+          <div className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="h-4 w-4 text-[#7C3AED]" />
+              <span className="text-sm font-bold text-foreground">Filter by Period</span>
+            </div>
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none">
+              {RANGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setDateRange(opt.value)}
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold
+                             transition-all duration-200 whitespace-nowrap flex-shrink-0
+                             ${dateRange === opt.value
+                               ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/25'
+                               : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95'
+                             }`}
+                >
+                  {opt.icon}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {summaryCards.map((card, idx) => (
           <SummaryCard key={idx} {...card} />
         ))}
@@ -322,30 +388,26 @@ export function Analytics() {
         transition={{ duration: 0.4, delay: 0.24 }}
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card">
-          {/* Left accent bar */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA] rounded-l-2xl" />
-
-          {/* Subtle background glow */}
           <div
             className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
             style={{ background: '#7C3AED' }}
           />
 
-          <div className="p-5 pl-6">
-            {/* Section Header */}
+          <div className="p-4 sm:p-5 pl-5 sm:pl-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-[#7C3AED]" />
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#7C3AED]" />
               </div>
-              <div>
-                <h3 className="text-foreground font-bold text-base">Last 7 Days — Sales & Profit Trend</h3>
-                <p className="text-muted-foreground text-xs mt-0.5">Revenue and profit over time</p>
+              <div className="min-w-0">
+                <h3 className="text-foreground font-bold text-sm sm:text-base">Last 7 Days — Sales & Profit</h3>
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">Revenue and profit over time</p>
               </div>
             </div>
           {chartData.length > 0 ? (
-            <div className="h-72 w-full">
+            <div className="h-56 sm:h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
@@ -359,15 +421,16 @@ export function Analytics() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
                     dataKey="dateLabel"
-                    tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                    tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
                     axisLine={{ stroke: 'var(--border)' }}
                     tickLine={{ stroke: 'var(--border)' }}
                   />
                   <YAxis
-                    tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                    tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
                     axisLine={{ stroke: 'var(--border)' }}
                     tickLine={{ stroke: 'var(--border)' }}
                     tickFormatter={(val) => `₹${val.toLocaleString('en-IN')}`}
+                    width={55}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
@@ -400,119 +463,152 @@ export function Analytics() {
       </div>
       </motion.div>
 
-      {/* Recent Completed Bills */}
+      {/* All Completed Bills */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.3 }}
       >
         <div className="relative rounded-2xl border border-[#10B981]/25 bg-card">
-          {/* Left accent bar */}
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399] rounded-l-2xl" />
-
-          {/* Subtle background glow */}
           <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
             style={{ background: '#10B981' }}
           />
 
-          <div className="p-5 pl-6">
+          <div className="p-4 sm:p-5 pl-5 sm:pl-6">
             {/* Section Header */}
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-[#10B981]" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[#10B981]" />
                 </div>
-                <div>
-                  <h3 className="text-foreground font-bold text-base">
+                <div className="min-w-0">
+                  <h3 className="text-foreground font-bold text-sm sm:text-base">
                     All Completed Bills
                   </h3>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    {completedBills.length} {completedBills.length === 1 ? 'bill' : 'bills'} found
+                  <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">
+                    {pagination.total} {pagination.total === 1 ? 'bill' : 'bills'} found
                   </p>
                 </div>
               </div>
-              <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/25 text-xs px-3 py-1 font-bold">
-                {completedBills.length}
+              <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/25 text-[10px] sm:text-xs px-2 sm:px-3 py-1 font-bold flex-shrink-0">
+                {pagination.total}
               </Badge>
             </div>
 
-            {completedBills.length === 0 ? (
+            {billsLoading && completedBills.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 text-[#10B981] animate-spin" />
+              </div>
+            ) : completedBills.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                 <CheckCircle className="h-10 w-10 mb-2 opacity-30" />
-                <p className="text-sm font-medium">No completed bills yet</p>
-                <p className="text-xs opacity-70">Create and finalize your first bill!</p>
+                <p className="text-sm font-medium">No completed bills for this period</p>
+                <p className="text-xs opacity-70">Try changing the filter above</p>
               </div>
             ) : (
-              <div
-                className="overflow-y-auto max-h-[50vh] sm:max-h-[60vh] md:max-h-[70vh] lg:max-h-[75vh] pr-1
-                           scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent
-                           [-webkit-overflow-scrolling:touch]"
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgba(120,120,120,0.2) transparent',
-                }}
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {completedBills.map((bill: any, idx: number) => (
-                    <motion.div
-                      key={bill.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(idx * 0.03, 0.5) }}
-                      className="relative bg-background rounded-xl p-4 border border-border
-                                  hover:border-[#10B981]/30 transition-all duration-200 group"
-                    >
-                      {/* Customer Name & Mobile */}
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {bill.customerName}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {bill.mobileName}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleViewInvoice(bill)}
+              <>
+                <div
+                  className="overflow-y-auto max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] pr-1
+                             scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent
+                             [-webkit-overflow-scrolling:touch]"
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: 'rgba(120,120,120,0.2) transparent',
+                  }}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                    <AnimatePresence mode="popLayout">
+                      {completedBills.map((bill: any, idx: number) => (
+                        <motion.div
+                          key={bill.id}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ delay: Math.min(idx * 0.02, 0.3), duration: 0.25 }}
+                          className="relative bg-background rounded-xl p-3 sm:p-4 border border-border
+                                      hover:border-[#10B981]/30 transition-all duration-200 group"
                         >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                          {/* Customer Name & Mobile */}
+                          <div className="flex items-start justify-between gap-2 mb-1.5 sm:mb-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                                {bill.customerName}
+                              </p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
+                                {bill.mobileName}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleViewInvoice(bill)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
 
-                      {/* Invoice ID & Date */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <Receipt className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="text-xs text-muted-foreground font-mono truncate">
-                          {bill.invoiceId}
-                        </span>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground truncate">
-                          {bill.date}
-                        </span>
-                      </div>
+                          {/* Invoice ID & Date */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                            <Receipt className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono truncate">
+                              {bill.invoiceId}
+                            </span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">•</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                              {bill.date}
+                            </span>
+                          </div>
 
-                      {/* Grand Total & Payment Status */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-extrabold text-foreground">
-                          {formatCurrency(bill.grandTotal)}
-                        </span>
-                        {bill.paymentStatus === 'Paid' ? (
-                          <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[10px] h-5 px-2 font-bold">
-                            Paid
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[10px] h-5 px-2 font-bold">
-                            {bill.paymentStatus}
-                          </Badge>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
+                          {/* Grand Total & Payment Status */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs sm:text-sm font-extrabold text-foreground">
+                              {formatCurrency(bill.grandTotal)}
+                            </span>
+                            {bill.paymentStatus === 'Paid' ? (
+                              <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+                                Paid
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+                                {bill.paymentStatus}
+                              </Badge>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
+
+                {/* Load More Button */}
+                {pagination.hasMore && (
+                  <div className="flex justify-center mt-4 pt-3 border-t border-border/40">
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMore}
+                      disabled={billsLoading}
+                      className="gap-2 text-xs sm:text-sm bg-background hover:bg-[#10B981]/5 hover:border-[#10B981]/30 hover:text-[#10B981] transition-all duration-200"
+                    >
+                      {billsLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                      Load More ({pagination.total - completedBills.length} remaining)
+                    </Button>
+                  </div>
+                )}
+
+                {/* Bills count summary */}
+                <div className="mt-3 text-center">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Showing {completedBills.length} of {pagination.total} bills
+                  </p>
+                </div>
+              </>
             )}
           </div>
         </div>

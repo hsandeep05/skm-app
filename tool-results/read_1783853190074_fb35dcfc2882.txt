@@ -1,0 +1,657 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useState, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Clock,
+     7→  Eye,
+     8→  AlertCircle,
+     9→  RefreshCw,
+    10→  Search,
+    11→  Filter,
+    12→  CheckCircle,
+    13→  IndianRupee,
+    14→} from 'lucide-react'
+    15→import { Button } from '@/components/ui/button'
+    16→import { Badge } from '@/components/ui/badge'
+    17→import { Input } from '@/components/ui/input'
+    18→import { ScrollArea } from '@/components/ui/scroll-area'
+    19→import {
+    20→  Dialog,
+    21→  DialogContent,
+    22→  DialogHeader,
+    23→  DialogTitle,
+    24→  DialogFooter,
+    25→} from '@/components/ui/dialog'
+    26→import {
+    27→  Select,
+    28→  SelectContent,
+    29→  SelectItem,
+    30→  SelectTrigger,
+    31→  SelectValue,
+    32→} from '@/components/ui/select'
+    33→import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
+    34→import { useRealtime } from '@/hooks/use-realtime'
+    35→import { useToast } from '@/hooks/use-toast'
+    36→import { performAutoBackup } from '@/lib/data-persistence'
+    37→
+    38→interface PendingBill {
+    39→  id: string
+    40→  invoiceId: string
+    41→  customerName: string
+    42→  customerPhone: string | null
+    43→  mobileName: string
+    44→  date: string
+    45→  subtotal: number
+    46→  discount: number
+    47→  grandTotal: number
+    48→  amountPaid: number
+    49→  balanceDue: number
+    50→  paymentStatus: string
+    51→  status: string
+    52→  items: Array<{
+    53→    id: string
+    54→    description: string
+    55→    costPrice: number
+    56→    sellingPrice: number
+    57→  }>
+    58→  createdAt: string
+    59→}
+    60→
+    61→function formatCurrency(amount: number): string {
+    62→  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    63→}
+    64→
+    65→function formatDate(dateStr: string): string {
+    66→  try {
+    67→    const d = new Date(dateStr)
+    68→    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    69→  } catch {
+    70→    return dateStr
+    71→  }
+    72→}
+    73→
+    74→export function PendingBills() {
+    75→  const [bills, setBills] = useState<PendingBill[]>([])
+    76→  const [filteredBills, setFilteredBills] = useState<PendingBill[]>([])
+    77→  const [loading, setLoading] = useState(true)
+    78→  const [searchQuery, setSearchQuery] = useState('')
+    79→  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'name'>('date')
+    80→  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
+    81→  const [modalOpen, setModalOpen] = useState(false)
+    82→  const [shopLogo, setShopLogo] = useState<string | null>(null)
+    83→  const [shopInfo, setShopInfo] = useState<{ shopName: string; shopAddress: string; shopTagline: string }>({ shopName: '', shopAddress: '', shopTagline: '' })
+    84→  const [recoverBill, setRecoverBill] = useState<PendingBill | null>(null)
+    85→  const [recoverAmount, setRecoverAmount] = useState('')
+    86→  const [recovering, setRecovering] = useState(false)
+    87→  const { lastEvent } = useRealtime()
+    88→  const { toast } = useToast()
+    89→
+    90→  // Load shop logo & settings
+    91→  useEffect(() => {
+    92→    fetch('/api/logo')
+    93→      .then(res => res.json())
+    94→      .then(d => { if (d.logo) setShopLogo(d.logo) })
+    95→      .catch(() => {})
+    96→    fetch('/api/shop-settings')
+    97→      .then(res => res.ok ? res.json() : null)
+    98→      .then(d => { if (d) setShopInfo({ shopName: d.shopName || '', shopAddress: d.shopAddress || '', shopTagline: d.shopTagline || '' }) })
+    99→      .catch(() => {})
+   100→  }, [])
+   101→
+   102→  const fetchPendingBills = useCallback(async () => {
+   103→    try {
+   104→      const res = await fetch('/api/invoices?status=pending')
+   105→      if (res.ok) {
+   106→        const json = await res.json()
+   107→        setBills(json.invoices || [])
+   108→      }
+   109→    } catch (err) {
+   110→      console.error('Failed to fetch pending bills:', err)
+   111→    } finally {
+   112→      setLoading(false)
+   113→    }
+   114→  }, [])
+   115→
+   116→  useEffect(() => {
+   117→    fetchPendingBills()
+   118→  }, [fetchPendingBills])
+   119→
+   120→  useEffect(() => {
+   121→    if (lastEvent) {
+   122→      fetchPendingBills()
+   123→    }
+   124→  }, [lastEvent, fetchPendingBills])
+   125→
+   126→  // Filter and sort bills
+   127→  useEffect(() => {
+   128→    let result = [...bills]
+   129→
+   130→    if (searchQuery) {
+   131→      const query = searchQuery.toLowerCase()
+   132→      result = result.filter(
+   133→        (bill) =>
+   134→          bill.customerName.toLowerCase().includes(query) ||
+   135→          bill.mobileName.toLowerCase().includes(query) ||
+   136→          bill.invoiceId.toLowerCase().includes(query)
+   137→      )
+   138→    }
+   139→
+   140→    switch (sortBy) {
+   141→      case 'amount':
+   142→        result.sort((a, b) => b.grandTotal - a.grandTotal)
+   143→        break
+   144→      case 'name':
+   145→        result.sort((a, b) => a.customerName.localeCompare(b.customerName))
+   146→        break
+   147→      case 'date':
+   148→      default:
+   149→        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+   150→    }
+   151→
+   152→    setFilteredBills(result)
+   153→  }, [bills, searchQuery, sortBy])
+   154→
+   155→  const handleViewInvoice = (bill: PendingBill) => {
+   156→    const invoiceData: InvoiceData = {
+   157→      invoiceId: bill.invoiceId,
+   158→      customerName: bill.customerName,
+   159→      customerPhone: bill.customerPhone || undefined,
+   160→      mobileName: bill.mobileName,
+   161→      date: bill.date,
+   162→      items: bill.items?.map((i) => ({
+   163→        description: i.description,
+   164→        costPrice: i.costPrice,
+   165→        sellingPrice: i.sellingPrice,
+   166→      })) || [],
+   167→      subtotal: bill.subtotal,
+   168→      discount: bill.discount,
+   169→      grandTotal: bill.grandTotal,
+   170→      amountPaid: bill.amountPaid,
+   171→      balanceDue: bill.balanceDue,
+   172→      shopLogo,
+   173→      shopName: shopInfo.shopName || undefined,
+   174→      shopAddress: shopInfo.shopAddress || undefined,
+   175→      shopTagline: shopInfo.shopTagline || undefined,
+   176→    }
+   177→    setSelectedInvoice(invoiceData)
+   178→    setModalOpen(true)
+   179→  }
+   180→
+   181→  const handleRecoverPayment = async () => {
+   182→    if (!recoverBill || !recoverAmount) return
+   183→
+   184→    const amount = parseFloat(recoverAmount)
+   185→    if (isNaN(amount) || amount <= 0) {
+   186→      toast({ title: 'Invalid Amount', description: 'Please enter a valid amount greater than 0', variant: 'destructive' })
+   187→      return
+   188→    }
+   189→
+   190→    if (amount > recoverBill.balanceDue) {
+   191→      toast({ title: 'Amount Exceeds Balance', description: `Recovery amount cannot exceed balance due of ${formatCurrency(recoverBill.balanceDue)}`, variant: 'destructive' })
+   192→      return
+   193→    }
+   194→
+   195→    setRecovering(true)
+   196→    try {
+   197→      // Fetch full invoice data first
+   198→      const res = await fetch(`/api/invoices/${recoverBill.id}`)
+   199→      if (!res.ok) throw new Error('Failed to fetch invoice')
+   200→      const { invoice } = await res.json()
+   201→
+   202→      const newAmountPaid = recoverBill.amountPaid + amount
+   203→      const newBalanceDue = recoverBill.grandTotal - newAmountPaid
+   204→      const isFullyPaid = newBalanceDue <= 0
+   205→
+   206→      const updateRes = await fetch(`/api/invoices/${recoverBill.id}`, {
+   207→        method: 'PUT',
+   208→        headers: { 'Content-Type': 'application/json' },
+   209→        body: JSON.stringify({
+   210→          ...invoice,
+   211→          amountPaid: newAmountPaid,
+   212→          balanceDue: Math.max(0, newBalanceDue),
+   213→          paymentStatus: isFullyPaid ? 'Paid' : 'Partial',
+   214→          status: isFullyPaid ? 'completed' : 'pending',
+   215→        }),
+   216→      })
+   217→
+   218→      if (updateRes.ok) {
+   219→        if (isFullyPaid) {
+   220→          toast({
+   221→            title: 'Payment Recorded & Bill Finalized',
+   222→            description: `${formatCurrency(amount)} recovered. Invoice ${recoverBill.invoiceId} is now fully paid and finalized!`,
+   223→          })
+   224→        } else {
+   225→          toast({
+   226→            title: 'Payment Recorded',
+   227→            description: `${formatCurrency(amount)} recovered. Remaining balance: ${formatCurrency(Math.max(0, newBalanceDue))}`,
+   228→          })
+   229→        }
+   230→        fetchPendingBills()
+   231→        setRecoverBill(null)
+   232→        // Auto-backup after payment recovery
+   233→        performAutoBackup().catch(() => {})
+   234→        setRecoverAmount('')
+   235→      } else {
+   236→        throw new Error('Failed to update invoice')
+   237→      }
+   238→    } catch (err) {
+   239→      toast({ title: 'Error', description: 'Failed to record payment recovery', variant: 'destructive' })
+   240→    } finally {
+   241→      setRecovering(false)
+   242→    }
+   243→  }
+   244→
+   245→  const openRecoverDialog = (bill: PendingBill) => {
+   246→    setRecoverBill(bill)
+   247→    setRecoverAmount('')
+   248→  }
+   249→
+   250→  if (loading) {
+   251→    return (
+   252→      <div className="flex items-center justify-center h-64">
+   253→        <div className="animate-spin h-8 w-8 border-4 border-[#7C3AED] border-t-transparent rounded-full" />
+   254→      </div>
+   255→    )
+   256→  }
+   257→
+   258→  const totalPendingAmount = bills.reduce((sum, b) => sum + b.balanceDue, 0)
+   259→
+   260→  return (
+   261→    <div className="space-y-4">
+   262→      {/* Header with Gradient Summary */}
+   263→      <motion.div
+   264→        initial={{ opacity: 0, y: 10 }}
+   265→        animate={{ opacity: 1, y: 0 }}
+   266→        className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#F59E0B]/10 via-[#F59E0B]/5 to-transparent border border-[#F59E0B]/20 p-4"
+   267→      >
+   268→        {/* Subtle dot pattern overlay */}
+   269→        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+   270→        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+   271→          <div className="flex items-center gap-3">
+   272→            <div className="relative h-11 w-11 rounded-xl bg-gradient-to-br from-[#F59E0B]/30 to-[#F59E0B]/10 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+   273→              <Clock className="h-5 w-5 text-[#F59E0B]" />
+   274→            </div>
+   275→            <div>
+   276→              <div className="flex items-center gap-2">
+   277→                <h2 className="text-foreground font-bold text-lg">Pending Bills</h2>
+   278→                {bills.length > 0 && (
+   279→                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[#F59E0B] text-white text-[10px] font-bold animate-pulse">
+   280→                    {bills.length}
+   281→                  </span>
+   282→                )}
+   283→              </div>
+   284→              <p className="text-muted-foreground text-xs">
+   285→                Total due: <span className="font-semibold text-[#F59E0B]">{formatCurrency(totalPendingAmount)}</span>
+   286→              </p>
+   287→            </div>
+   288→          </div>
+   289→          <Button
+   290→            variant="outline"
+   291→            size="sm"
+   292→            onClick={fetchPendingBills}
+   293→            className="border-[#7C3AED]/50 text-[#7C3AED] hover:bg-[#7C3AED]/10 hover:border-[#7C3AED] gap-1.5 backdrop-blur-sm"
+   294→          >
+   295→            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+   296→          </Button>
+   297→        </div>
+   298→      </motion.div>
+   299→
+   300→      {/* Summary Stats Strip */}
+   301→      {bills.length > 0 && (
+   302→        <motion.div
+   303→          initial={{ opacity: 0, y: 5 }}
+   304→          animate={{ opacity: 1, y: 0 }}
+   305→          transition={{ delay: 0.05 }}
+   306→          className="flex items-center gap-2 flex-wrap"
+   307→        >
+   308→          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs">
+   309→            <div className="h-1.5 w-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+   310→            <span className="text-muted-foreground">Bills</span>
+   311→            <span className="font-semibold text-foreground">{bills.length}</span>
+   312→          </div>
+   313→          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs">
+   314→            <div className="h-1.5 w-1.5 rounded-full bg-[#7C3AED]" />
+   315→            <span className="text-muted-foreground">Amount</span>
+   316→            <span className="font-semibold text-foreground">{formatCurrency(totalPendingAmount)}</span>
+   317→          </div>
+   318→          {bills.filter((b) => b.paymentStatus === 'Partial').length > 0 && (
+   319→            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs">
+   320→              <div className="h-1.5 w-1.5 rounded-full bg-[#3B82F6]" />
+   321→              <span className="text-muted-foreground">Partial</span>
+   322→              <span className="font-semibold text-foreground">{bills.filter((b) => b.paymentStatus === 'Partial').length}</span>
+   323→            </div>
+   324→          )}
+   325→        </motion.div>
+   326→      )}
+   327→
+   328→      {/* Search & Sort */}
+   329→      <motion.div
+   330→        initial={{ opacity: 0, y: 10 }}
+   331→        animate={{ opacity: 1, y: 0 }}
+   332→        transition={{ delay: 0.05 }}
+   333→        className="flex flex-col sm:flex-row gap-3 p-3 rounded-xl bg-card/50 border border-border/50"
+   334→      >
+   335→        <div className="relative flex-1">
+   336→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+   337→          <Input
+   338→            value={searchQuery}
+   339→            onChange={(e) => setSearchQuery(e.target.value)}
+   340→            placeholder="Search by name, mobile, or invoice ID..."
+   341→            className="bg-background border-border text-foreground placeholder:text-muted-foreground pl-9 h-9 focus-visible:ring-[#7C3AED]/30 focus-visible:border-[#7C3AED]/50 focus-visible:shadow-[0_0_12px_rgba(124,58,237,0.15)]"
+   342→          />
+   343→        </div>
+   344→        <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'date' | 'amount' | 'name')}>
+   345→          <SelectTrigger className="w-full sm:w-44 bg-background border-border text-foreground h-9 focus:ring-[#7C3AED]/30">
+   346→            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+   347→            <SelectValue />
+   348→          </SelectTrigger>
+   349→          <SelectContent className="bg-card border-border">
+   350→            <SelectItem value="date">Sort by Date</SelectItem>
+   351→            <SelectItem value="amount">Sort by Amount</SelectItem>
+   352→            <SelectItem value="name">Sort by Name</SelectItem>
+   353→          </SelectContent>
+   354→        </Select>
+   355→      </motion.div>
+   356→
+   357→      {/* Bills List */}
+   358→      {filteredBills.length === 0 ? (
+   359→        <motion.div
+   360→          initial={{ opacity: 0, scale: 0.95 }}
+   361→          animate={{ opacity: 1, scale: 1 }}
+   362→          className="flex flex-col items-center justify-center py-20 text-center"
+   363→        >
+   364→          <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-[#10B981]/20 to-[#10B981]/5 flex items-center justify-center mb-5 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+   365→            <CheckCircle className="h-10 w-10 text-[#10B981]" />
+   366→          </div>
+   367→          <h3 className="text-foreground font-bold text-xl">All Caught Up!</h3>
+   368→          <p className="text-muted-foreground text-sm mt-2 max-w-xs">
+   369→            {searchQuery
+   370→              ? 'No pending bills match your search. Try different keywords.'
+   371→              : 'No pending bills at the moment. Great job staying on top of things!'}
+   372→          </p>
+   373→        </motion.div>
+   374→      ) : (
+   375→        <ScrollArea className="h-[calc(100vh-18rem)]">
+   376→          <div className="space-y-2.5">
+   377→            <AnimatePresence>
+   378→              {filteredBills.map((bill, idx) => {
+   379→                const paymentProgress = bill.grandTotal > 0 ? (bill.amountPaid / bill.grandTotal) * 100 : 0
+   380→                return (
+   381→                  <motion.div
+   382→                    key={bill.id}
+   383→                    initial={{ opacity: 0, y: 10 }}
+   384→                    animate={{ opacity: 1, y: 0 }}
+   385→                    exit={{ opacity: 0, x: -100 }}
+   386→                    transition={{ delay: idx * 0.02 }}
+   387→                    className="group relative bg-card border border-[#F59E0B]/15 hover:border-[#F59E0B]/40 rounded-xl p-4 pl-5 transition-all duration-300 hover:shadow-lg hover:shadow-[#F59E0B]/5"
+   388→                  >
+   389→                    {/* Left accent bar */}
+   390→                    <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-gradient-to-b from-[#F59E0B] to-[#F59E0B]/30" />
+   391→
+   392→                    {/* Subtle radial glow in top-right */}
+   393→                    <div className="absolute top-0 right-0 w-24 h-24 rounded-tr-xl bg-gradient-to-bl from-[#F59E0B]/5 to-transparent pointer-events-none" />
+   394→
+   395→                    {/* Dot pattern overlay */}
+   396→                    <div className="absolute inset-0 rounded-xl opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, currentColor 0.5px, transparent 0.5px)', backgroundSize: '12px 12px' }} />
+   397→
+   398→                    <div className="relative">
+   399→                      {/* Top Row: Customer info + Amount */}
+   400→                      <div className="flex items-start justify-between gap-2">
+   401→                        <div className="flex-1 min-w-0">
+   402→                          <div className="flex items-center gap-2 flex-wrap">
+   403→                            <span className="text-foreground font-bold text-sm truncate">
+   404→                              {bill.customerName}
+   405→                            </span>
+   406→                            <Badge className="bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 text-[10px] h-5 px-2 font-semibold rounded-full">
+   407→                              Pending
+   408→                            </Badge>
+   409→                            {bill.paymentStatus === 'Partial' && (
+   410→                              <Badge className="bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 text-[10px] h-5 px-2 font-semibold rounded-full">
+   411→                                Partial
+   412→                              </Badge>
+   413→                            )}
+   414→                          </div>
+   415→                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+   416→                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
+   417→                              <AlertCircle className="h-3 w-3" />
+   418→                              {bill.invoiceId}
+   419→                            </span>
+   420→                            <span className="text-xs text-muted-foreground font-medium">
+   421→                              {bill.mobileName}
+   422→                            </span>
+   423→                            <span className="text-xs text-muted-foreground">
+   424→                              {formatDate(bill.date)}
+   425→                            </span>
+   426→                          </div>
+   427→                        </div>
+   428→                        <div className="text-right flex-shrink-0">
+   429→                          <p className="text-sm font-bold text-foreground">{formatCurrency(bill.grandTotal)}</p>
+   430→                          {bill.balanceDue > 0 && (
+   431→                            <p className="text-xs text-[#F59E0B] font-semibold">
+   432→                              Due: {formatCurrency(bill.balanceDue)}
+   433→                            </p>
+   434→                          )}
+   435→                        </div>
+   436→                      </div>
+   437→
+   438→                      {/* Items Row */}
+   439→                      {bill.items && bill.items.length > 0 && (
+   440→                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+   441→                          {bill.items.slice(0, 3).map((item, i) => (
+   442→                            <span key={i} className="text-[10px] bg-background/80 text-muted-foreground px-2 py-0.5 rounded-full border border-border/50 font-medium">
+   443→                              {item.description}
+   444→                            </span>
+   445→                          ))}
+   446→                          {bill.items.length > 3 && (
+   447→                            <span className="text-[10px] text-muted-foreground font-medium px-1.5">
+   448→                              +{bill.items.length - 3} more
+   449→                            </span>
+   450→                          )}
+   451→                        </div>
+   452→                      )}
+   453→
+   454→                      {/* Partial payment progress indicator */}
+   455→                      {bill.paymentStatus === 'Partial' && bill.amountPaid > 0 && (
+   456→                        <div className="mt-2.5">
+   457→                          <div className="flex items-center justify-between mb-1">
+   458→                            <span className="text-[10px] font-semibold text-[#F59E0B]">
+   459→                              {formatCurrency(bill.amountPaid)} of {formatCurrency(bill.grandTotal)} paid
+   460→                            </span>
+   461→                            <span className="text-[10px] font-bold text-[#F59E0B]">
+   462→                              {Math.round(paymentProgress)}%
+   463→                            </span>
+   464→                          </div>
+   465→                          <div className="h-1.5 w-full rounded-full bg-[#F59E0B]/10 overflow-hidden">
+   466→                            <motion.div
+   467→                              initial={{ width: 0 }}
+   468→                              animate={{ width: `${paymentProgress}%` }}
+   469→                              transition={{ duration: 0.6, ease: 'easeOut' }}
+   470→                              className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/70"
+   471→                            />
+   472→                          </div>
+   473→                        </div>
+   474→                      )}
+   475→
+   476→                      {/* Action Buttons Row */}
+   477→                      <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/40">
+   478→                        <Button
+   479→                          variant="outline"
+   480→                          size="sm"
+   481→                          className="h-8 gap-1.5 text-xs border-border/60 text-muted-foreground hover:text-[#7C3AED] hover:border-[#7C3AED]/30 hover:bg-[#7C3AED]/5 flex-1 sm:flex-none"
+   482→                          onClick={() => handleViewInvoice(bill)}
+   483→                        >
+   484→                          <Eye className="h-3.5 w-3.5" /> View
+   485→                        </Button>
+   486→                        <Button
+   487→                          variant="outline"
+   488→                          size="sm"
+   489→                          className="h-8 gap-1.5 text-xs border-[#F59E0B]/30 text-[#F59E0B] hover:bg-[#F59E0B]/10 hover:border-[#F59E0B]/50 flex-1 sm:flex-none"
+   490→                          onClick={() => openRecoverDialog(bill)}
+   491→                        >
+   492→                          <IndianRupee className="h-3.5 w-3.5" /> Recover
+   493→                        </Button>
+   494→                      </div>
+   495→                    </div>
+   496→                  </motion.div>
+   497→                )
+   498→              })}
+   499→            </AnimatePresence>
+   500→          </div>
+   501→        </ScrollArea>
+   502→      )}
+   503→
+   504→      {/* Invoice Preview Modal */}
+   505→      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+   506→        <DialogContent className="bg-card border-border/80 max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+   507→          <DialogHeader>
+   508→            <DialogTitle className="text-foreground font-bold">Invoice Preview</DialogTitle>
+   509→          </DialogHeader>
+   510→          {selectedInvoice && (
+   511→            <InvoicePreview data={selectedInvoice} showDownload />
+   512→          )}
+   513→        </DialogContent>
+   514→      </Dialog>
+   515→
+   516→      {/* Recover Payment Dialog */}
+   517→      <Dialog open={!!recoverBill} onOpenChange={(open) => { if (!open) { setRecoverBill(null); setRecoverAmount('') } }}>
+   518→        <DialogContent className="bg-card border-border/80 max-w-sm shadow-2xl">
+   519→          <DialogHeader>
+   520→            <DialogTitle className="text-foreground font-bold flex items-center gap-2">
+   521→              <div className="h-8 w-8 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center">
+   522→                <IndianRupee className="h-4 w-4 text-[#F59E0B]" />
+   523→              </div>
+   524→              Recover Payment
+   525→            </DialogTitle>
+   526→          </DialogHeader>
+   527→
+   528→          {recoverBill && (
+   529→            <div className="space-y-4">
+   530→              {/* Bill Info */}
+   531→              <div className="rounded-xl bg-background/80 border border-border/50 p-3 space-y-2">
+   532→                <div className="flex items-center justify-between">
+   533→                  <span className="text-xs text-muted-foreground">Customer</span>
+   534→                  <span className="text-sm font-semibold text-foreground">{recoverBill.customerName}</span>
+   535→                </div>
+   536→                {recoverBill.customerPhone && (
+   537→                  <div className="flex items-center justify-between">
+   538→                    <span className="text-xs text-muted-foreground">Mobile</span>
+   539→                    <span className="text-sm font-medium text-foreground font-mono">{recoverBill.customerPhone}</span>
+   540→                  </div>
+   541→                )}
+   542→                <div className="flex items-center justify-between">
+   543→                  <span className="text-xs text-muted-foreground">Invoice ID</span>
+   544→                  <span className="text-xs font-medium text-foreground font-mono">{recoverBill.invoiceId}</span>
+   545→                </div>
+   546→              </div>
+   547→
+   548→              {/* Amount Breakdown */}
+   549→              <div className="rounded-xl bg-background/80 border border-border/50 p-3 space-y-2">
+   550→                <div className="flex items-center justify-between">
+   551→                  <span className="text-xs text-muted-foreground">Grand Total</span>
+   552→                  <span className="text-sm font-bold text-foreground">{formatCurrency(recoverBill.grandTotal)}</span>
+   553→                </div>
+   554→                <div className="flex items-center justify-between">
+   555→                  <span className="text-xs text-muted-foreground">Amount Paid</span>
+   556→                  <span className="text-sm font-semibold text-[#10B981]">{formatCurrency(recoverBill.amountPaid)}</span>
+   557→                </div>
+   558→                <div className="h-px bg-border/50" />
+   559→                <div className="flex items-center justify-between">
+   560→                  <span className="text-xs font-semibold text-[#F59E0B]">Balance Due</span>
+   561→                  <span className="text-sm font-bold text-[#F59E0B]">{formatCurrency(recoverBill.balanceDue)}</span>
+   562→                </div>
+   563→              </div>
+   564→
+   565→              {/* Progress Bar for current payment status */}
+   566→              {recoverBill.amountPaid > 0 && (
+   567→                <div>
+   568→                  <div className="flex items-center justify-between mb-1.5">
+   569→                    <span className="text-[10px] font-medium text-muted-foreground">Payment Progress</span>
+   570→                    <span className="text-[10px] font-bold text-[#F59E0B]">
+   571→                      {Math.round((recoverBill.amountPaid / recoverBill.grandTotal) * 100)}%
+   572→                    </span>
+   573→                  </div>
+   574→                  <div className="h-2 w-full rounded-full bg-[#F59E0B]/10 overflow-hidden">
+   575→                    <div
+   576→                      className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/70 transition-all duration-500"
+   577→                      style={{ width: `${(recoverBill.amountPaid / recoverBill.grandTotal) * 100}%` }}
+   578→                    />
+   579→                  </div>
+   580→                </div>
+   581→              )}
+   582→
+   583→              {/* Amount Input */}
+   584→              <div className="space-y-2">
+   585→                <label className="text-xs font-semibold text-foreground">Amount Recovered</label>
+   586→                <div className="relative">
+   587→                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#F59E0B]" />
+   588→                  <Input
+   589→                    type="number"
+   590→                    min="0"
+   591→                    max={recoverBill.balanceDue}
+   592→                    step="0.01"
+   593→                    value={recoverAmount}
+   594→                    onChange={(e) => setRecoverAmount(e.target.value)}
+   595→                    placeholder="Enter amount recovered"
+   596→                    className="bg-background border-[#F59E0B]/30 text-foreground placeholder:text-muted-foreground pl-9 h-10 focus-visible:ring-[#F59E0B]/30 focus-visible:border-[#F59E0B]/50 focus-visible:shadow-[0_0_12px_rgba(245,158,11,0.15)]"
+   597→                  />
+   598→                </div>
+   599→                {recoverAmount && parseFloat(recoverAmount) > 0 && (
+   600→                  <div className="rounded-lg bg-[#F59E0B]/5 border border-[#F59E0B]/15 p-2 space-y-1">
+   601→                    <div className="flex items-center justify-between">
+   602→                      <span className="text-[10px] text-muted-foreground">New Amount Paid</span>
+   603→                      <span className="text-[10px] font-semibold text-[#10B981]">
+   604→                        {formatCurrency(recoverBill.amountPaid + parseFloat(recoverAmount))}
+   605→                      </span>
+   606→                    </div>
+   607→                    <div className="flex items-center justify-between">
+   608→                      <span className="text-[10px] text-muted-foreground">New Balance Due</span>
+   609→                      <span className="text-[10px] font-semibold text-[#F59E0B]">
+   610→                        {formatCurrency(Math.max(0, recoverBill.grandTotal - recoverBill.amountPaid - parseFloat(recoverAmount)))}
+   611→                      </span>
+   612→                    </div>
+   613→                    {(recoverBill.grandTotal - recoverBill.amountPaid - parseFloat(recoverAmount)) <= 0 && (
+   614→                      <div className="flex items-center gap-1 pt-1">
+   615→                        <CheckCircle className="h-3 w-3 text-[#10B981]" />
+   616→                        <span className="text-[10px] font-bold text-[#10B981]">Bill will be finalized automatically</span>
+   617→                      </div>
+   618→                    )}
+   619→                  </div>
+   620→                )}
+   621→              </div>
+   622→            </div>
+   623→          )}
+   624→
+   625→          <DialogFooter className="gap-2">
+   626→            <Button
+   627→              variant="outline"
+   628→              onClick={() => { setRecoverBill(null); setRecoverAmount('') }}
+   629→              className="border-border text-foreground hover:bg-muted"
+   630→              disabled={recovering}
+   631→            >
+   632→              Cancel
+   633→            </Button>
+   634→            <Button
+   635→              onClick={handleRecoverPayment}
+   636→              disabled={recovering || !recoverAmount || parseFloat(recoverAmount) <= 0}
+   637→              className="bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-white hover:shadow-md hover:shadow-[#F59E0B]/20 transition-shadow"
+   638→            >
+   639→              {recovering ? (
+   640→                <div className="flex items-center gap-2">
+   641→                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+   642→                  Recording...
+   643→                </div>
+   644→              ) : (
+   645→                <div className="flex items-center gap-2">
+   646→                  <IndianRupee className="h-4 w-4" />
+   647→                  Record Payment
+   648→                </div>
+   649→              )}
+   650→            </Button>
+   651→          </DialogFooter>
+   652→        </DialogContent>
+   653→      </Dialog>
+   654→    </div>
+   655→  )
+   656→}
+   657→

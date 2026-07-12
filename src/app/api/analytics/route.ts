@@ -4,11 +4,49 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
+    const date = searchParams.get('date')
+    const range = searchParams.get('range') || 'today' // today, week, month, all
 
-    // Get all completed invoices for the date
+    // Calculate date range
+    const now = new Date()
+    let startDate: string | null = null
+    let endDate: string | null = null
+
+    if (range === 'today') {
+      startDate = now.toISOString().split('T')[0]
+      endDate = startDate
+    } else if (range === 'week') {
+      // Start from Monday of current week
+      const dayOfWeek = now.getDay()
+      const monday = new Date(now)
+      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+      startDate = monday.toISOString().split('T')[0]
+      endDate = now.toISOString().split('T')[0]
+    } else if (range === 'month') {
+      startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      endDate = now.toISOString().split('T')[0]
+    }
+    // range === 'all' → no date filter
+
+    // If specific date is provided, override range
+    if (date) {
+      startDate = date
+      endDate = date
+    }
+
+    // Build where clause
+    const where: any = { status: 'completed' }
+    if (startDate && endDate) {
+      if (startDate === endDate) {
+        where.date = startDate
+      } else {
+        where.date = { gte: startDate, lte: endDate }
+      }
+    }
+
+    // Get completed invoices for the date range
     const invoices = await db.invoice.findMany({
-      where: { status: 'completed', date },
+      where,
       include: { items: true },
     })
 
@@ -35,7 +73,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      date,
+      date: startDate || 'all',
+      range,
       totalGrossSales,
       totalCashCollected,
       totalOutstanding,
