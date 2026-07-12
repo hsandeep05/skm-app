@@ -1,9 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 
-// Ensure DATABASE_URL is set correctly for MongoDB
-// (System env var from old SQLite setup may override .env)
-if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('mongodb')) {
-  delete process.env.DATABASE_URL
+// DATABASE_URL handling:
+// - On Vercel: Set via environment variables (correct MongoDB URL)
+// - In sandbox: System env may have old SQLite URL, override needed
+const MONGODB_FALLBACK = 'mongodb+srv://skmadmin:Skm12345@cluster0.iklhwdg.mongodb.net/skm?retryWrites=true&w=majority&appName=Cluster0'
+
+function getDatabaseUrl(): string {
+  const envUrl = process.env.DATABASE_URL
+  if (envUrl && envUrl.startsWith('mongodb')) {
+    return envUrl
+  }
+  // Fallback for sandbox where system env has wrong DATABASE_URL
+  return MONGODB_FALLBACK
 }
 
 const globalForPrisma = globalThis as unknown as {
@@ -12,6 +20,7 @@ const globalForPrisma = globalThis as unknown as {
 
 export const db = globalForPrisma.prisma ?? new PrismaClient({
   log: ['error', 'warn'],
+  datasourceUrl: getDatabaseUrl(),
 })
 
 if (process.env.NODE_ENV !== 'production') {
