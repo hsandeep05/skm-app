@@ -82,3 +82,30 @@ Stage Summary:
 - Key code changes: Manual updatedAt in all update operations, MongoDB-compatible health check, simplified db.ts
 - No frontend changes made
 - Pushed to GitHub: feat: Migrate from SQLite/Turso to MongoDB Atlas for Vercel compatibility
+
+---
+Task ID: 4
+Agent: Main
+Task: Fix MongoDB Atlas connection and prepare for Vercel deployment
+
+Work Log:
+- Discovered wrong cluster URL: was using cluster0.13dkmku.mongodb.net but actual cluster is cluster0.iklhwdg.mongodb.net
+- Tested all password combinations - found that system env var DATABASE_URL was overriding .env with old SQLite path
+- User updated skmadmin password to Skm12345 in Atlas Dashboard
+- User added 0.0.0.0/0 to Network Access IP Allowlist for Vercel connectivity
+- Got correct connection string from Atlas: mongodb+srv://skmadmin:Skm12345@cluster0.iklhwdg.mongodb.net/
+- Successfully connected to MongoDB Atlas with correct URL
+- Pushed schema to MongoDB Atlas (7 collections created)
+- Seeded database with admin user (SriKrishna/Krishna@123 with SHA256 hash)
+- Fixed db.ts: Added datasourceUrl parameter and getDatabaseUrl() function to handle sandbox environment override
+- Updated build.sh and build.cjs: Removed SQLite-specific logic (file:./db/custom.db references)
+- Removed unused mongodb npm package (Prisma handles connections internally)
+- Tested locally: health check ✅, login ✅, page load ✅
+- GitHub token expired - could not push code automatically
+
+Stage Summary:
+- MongoDB Atlas fully working: cluster0.iklhwdg.mongodb.net, user skmadmin, password Skm12345, database skm
+- Correct connection string: mongodb+srv://skmadmin:Skm12345@cluster0.iklhwdg.mongodb.net/skm?retryWrites=true&w=majority&appName=Cluster0
+- db.ts uses datasourceUrl to ensure reliable MongoDB connection even with stale env vars
+- Build scripts cleaned up for MongoDB (no more SQLite references)
+- Need: New GitHub token to push code, and Vercel env var update
