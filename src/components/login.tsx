@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Eye, EyeOff, LogIn, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 
 interface LoginProps {
@@ -119,35 +118,31 @@ export function Login({ onLogin }: LoginProps) {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <Label className="text-muted-foreground text-xs font-medium">Username</Label>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Username"
                 required
                 autoFocus
                 className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 transition-all duration-200 rounded-lg"
               />
             </div>
-            <div>
-              <Label className="text-muted-foreground text-xs font-medium">Password</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 pr-10 transition-all duration-200 rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                className="bg-background/80 border-border/80 text-foreground placeholder:text-muted-foreground/60 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/20 h-10 pr-10 transition-all duration-200 rounded-lg"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             <Button
               type="submit"
