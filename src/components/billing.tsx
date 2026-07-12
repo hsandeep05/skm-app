@@ -203,6 +203,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
       calculatedNetProfit: netProfit,
       paymentStatus: balanceDue <= 0 ? 'Paid' : amountPaid > 0 ? 'Partial' : 'Pending',
       status,
+      date: billDate,
       updatedBy: 'operator_primary',
       tempId: generateTempId(),
     }

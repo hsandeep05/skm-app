@@ -1,0 +1,651 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { format } from 'date-fns'
+     6→import { DollarSign, TrendingUp, Clock, BarChart3, CheckCircle, Eye, FileText, Receipt, ChevronDown, Loader2, Calendar, Filter } from 'lucide-react'
+     7→import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+     8→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     9→import { Badge } from '@/components/ui/badge'
+    10→import { Button } from '@/components/ui/button'
+    11→import {
+    12→  Dialog,
+    13→  DialogContent,
+    14→  DialogHeader,
+    15→  DialogTitle,
+    16→} from '@/components/ui/dialog'
+    17→import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
+    18→
+    19→type DateRange = 'date' | 'week' | 'month' | 'all'
+    20→
+    21→interface AnalyticsData {
+    22→  date: string
+    23→  range: string
+    24→  totalGrossSales: number
+    25→  totalCashCollected: number
+    26→  totalOutstanding: number
+    27→  totalNetProfit: number
+    28→  invoiceCount: number
+    29→  trend: {
+    30→    date: string
+    31→    sales: number
+    32→    profit: number
+    33→    count: number
+    34→  }[]
+    35→}
+    36→
+    37→interface Pagination {
+    38→  page: number
+    39→  limit: number
+    40→  total: number
+    41→  totalPages: number
+    42→  hasMore: boolean
+    43→}
+    44→
+    45→function formatCurrency(amount: number): string {
+    46→  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    47→}
+    48→
+    49→interface SummaryCardProps {
+    50→  title: string
+    51→  value: string
+    52→  icon: React.ReactNode
+    53→  accentColor: string
+    54→  gradientFrom: string
+    55→  delay?: number
+    56→}
+    57→
+    58→function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }: SummaryCardProps) {
+    59→  const [hovered, setHovered] = useState(false)
+    60→
+    61→  return (
+    62→    <motion.div
+    63→      initial={{ opacity: 0, y: 24 }}
+    64→      animate={{ opacity: 1, y: 0 }}
+    65→      transition={{ duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
+    66→    >
+    67→      <div
+    68→        className="group relative overflow-hidden rounded-2xl border bg-card
+    69→                    transition-all duration-300 ease-out
+    70→                    hover:-translate-y-1
+    71→                    cursor-default"
+    72→        style={{
+    73→          borderColor: hovered ? 'transparent' : undefined,
+    74→          boxShadow: hovered
+    75→            ? `0 8px 30px -8px ${accentColor}35, 0 0 20px -6px ${accentColor}20`
+    76→            : undefined,
+    77→        }}
+    78→        onMouseEnter={() => setHovered(true)}
+    79→        onMouseLeave={() => setHovered(false)}
+    80→      >
+    81→        <div
+    82→          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+    83→          style={{
+    84→            opacity: hovered ? 1 : 0,
+    85→            background: `linear-gradient(135deg, ${accentColor}08 0%, transparent 60%)`,
+    86→          }}
+    87→        />
+    88→        <div
+    89→          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+    90→          style={{
+    91→            backgroundImage: `radial-gradient(circle, ${accentColor} 1px, transparent 1px)`,
+    92→            backgroundSize: '16px 16px',
+    93→          }}
+    94→        />
+    95→        <div
+    96→          className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+    97→          style={{
+    98→            background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
+    99→          }}
+   100→        />
+   101→        <div
+   102→          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+   103→          style={{
+   104→            background: `linear-gradient(180deg, ${accentColor}, ${gradientFrom})`,
+   105→          }}
+   106→        />
+   107→
+   108→        <div className="relative p-3 pl-4 sm:p-5 sm:pl-6">
+   109→          <div className="flex items-start justify-between gap-2 sm:gap-3">
+   110→            <div className="min-w-0 flex-1">
+   111→              <p
+   112→                className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.08em] sm:tracking-[0.1em] truncate"
+   113→                style={{ color: accentColor }}
+   114→              >
+   115→                {title}
+   116→              </p>
+   117→              <p className="text-sm sm:text-xl md:text-2xl font-extrabold text-foreground mt-1 sm:mt-2 tracking-tight truncate leading-none">
+   118→                {value}
+   119→              </p>
+   120→            </div>
+   121→            <div
+   122→              className="relative h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0
+   123→                          transition-all duration-300"
+   124→              style={{
+   125→                background: `linear-gradient(135deg, ${accentColor}${hovered ? '25' : '18'}, ${accentColor}${hovered ? '12' : '08'})`,
+   126→                transform: hovered ? 'scale(1.1)' : undefined,
+   127→                boxShadow: hovered
+   128→                  ? `0 0 20px -4px ${accentColor}40, 0 0 8px -2px ${accentColor}25`
+   129→                  : 'none',
+   130→              }}
+   131→            >
+   132→              <div
+   133→                className="absolute inset-[2px] rounded-full border transition-colors duration-300"
+   134→                style={{ borderColor: `${accentColor}${hovered ? '35' : '20'}` }}
+   135→              />
+   136→              <div className="scale-75 sm:scale-100" style={{ color: accentColor }}>{icon}</div>
+   137→            </div>
+   138→          </div>
+   139→        </div>
+   140→      </div>
+   141→    </motion.div>
+   142→  )
+   143→}
+   144→
+   145→// Custom tooltip for recharts
+   146→function CustomTooltip({ active, payload, label }: any) {
+   147→  if (active && payload && payload.length) {
+   148→    return (
+   149→      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+   150→        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+   151→        {payload.map((entry: any, idx: number) => (
+   152→          <p key={idx} className="text-xs font-semibold" style={{ color: entry.color }}>
+   153→            {entry.name}: {formatCurrency(entry.value)}
+   154→          </p>
+   155→        ))}
+   156→      </div>
+   157→    )
+   158→  }
+   159→  return null
+   160→}
+   161→
+   162→const RANGE_OPTIONS: { value: DateRange; label: string; icon: React.ReactNode }[] = [
+   163→  { value: 'date', label: 'By Date', icon: <Calendar className="h-3.5 w-3.5" /> },
+   164→  { value: 'week', label: 'This Week', icon: <Calendar className="h-3.5 w-3.5" /> },
+   165→  { value: 'month', label: 'This Month', icon: <Calendar className="h-3.5 w-3.5" /> },
+   166→  { value: 'all', label: 'All Time', icon: <BarChart3 className="h-3.5 w-3.5" /> },
+   167→]
+   168→
+   169→export function Analytics() {
+   170→  const [dateRange, setDateRange] = useState<DateRange>('date')
+   171→  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+   172→  const [data, setData] = useState<AnalyticsData | null>(null)
+   173→  const [loading, setLoading] = useState(true)
+   174→  const [completedBills, setCompletedBills] = useState<any[]>([])
+   175→  const [billsLoading, setBillsLoading] = useState(false)
+   176→  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0, hasMore: false })
+   177→  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
+   178→  const [modalOpen, setModalOpen] = useState(false)
+   179→  const [shopLogo, setShopLogo] = useState<string | null>(null)
+   180→  const [shopInfo, setShopInfo] = useState<{ shopName: string; shopAddress: string; shopTagline: string }>({ shopName: '', shopAddress: '', shopTagline: '' })
+   181→
+   182→  const fetchAnalytics = useCallback(async () => {
+   183→    setLoading(true)
+   184→    try {
+   185→      let url = `/api/analytics?range=${dateRange}`
+   186→      if (dateRange === 'date') {
+   187→        url = `/api/analytics?date=${selectedDate}`
+   188→      }
+   189→      const res = await fetch(url)
+   190→      if (res.ok) {
+   191→        const json = await res.json()
+   192→        setData(json)
+   193→      }
+   194→    } catch (err) {
+   195→      console.error('Failed to fetch analytics:', err)
+   196→    } finally {
+   197→      setLoading(false)
+   198→    }
+   199→  }, [dateRange, selectedDate])
+   200→
+   201→  const fetchCompletedBills = useCallback(async (page: number, append: boolean = false) => {
+   202→    if (!append) setBillsLoading(true)
+   203→    try {
+   204→      // Calculate date range for filtering bills
+   205→      const now = new Date()
+   206→      let startDate = ''
+   207→      let endDate = ''
+   208→
+   209→      if (dateRange === 'date') {
+   210→        startDate = selectedDate
+   211→        endDate = selectedDate
+   212→      } else if (dateRange === 'week') {
+   213→        const dayOfWeek = now.getDay()
+   214→        const monday = new Date(now)
+   215→        monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+   216→        startDate = monday.toISOString().split('T')[0]
+   217→        endDate = now.toISOString().split('T')[0]
+   218→      } else if (dateRange === 'month') {
+   219→        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+   220→        endDate = now.toISOString().split('T')[0]
+   221→      }
+   222→      // 'all' = no date filter
+   223→
+   224→      let url = `/api/invoices?status=completed&page=${page}&limit=10`
+   225→      if (startDate && endDate) {
+   226→        url += `&startDate=${startDate}&endDate=${endDate}`
+   227→      }
+   228→
+   229→      const res = await fetch(url)
+   230→      if (res.ok) {
+   231→        const json = await res.json()
+   232→        if (append) {
+   233→          setCompletedBills(prev => [...prev, ...(json.invoices || [])])
+   234→        } else {
+   235→          setCompletedBills(json.invoices || [])
+   236→        }
+   237→        setPagination(json.pagination || { page, limit: 10, total: 0, totalPages: 0, hasMore: false })
+   238→      }
+   239→    } catch (err) {
+   240→      console.error('Failed to fetch completed bills:', err)
+   241→    } finally {
+   242→      setBillsLoading(false)
+   243→    }
+   244→  }, [dateRange, selectedDate])
+   245→
+   246→  // Load shop logo & settings
+   247→  useEffect(() => {
+   248→    fetch('/api/logo')
+   249→      .then(res => res.json())
+   250→      .then(d => { if (d.logo) setShopLogo(d.logo) })
+   251→      .catch(() => {})
+   252→    fetch('/api/shop-settings')
+   253→      .then(res => res.ok ? res.json() : null)
+   254→      .then(d => { if (d) setShopInfo({ shopName: d.shopName || '', shopAddress: d.shopAddress || '', shopTagline: d.shopTagline || '' }) })
+   255→      .catch(() => {})
+   256→  }, [])
+   257→
+   258→  useEffect(() => {
+   259→    fetchAnalytics()
+   260→  }, [fetchAnalytics])
+   261→
+   262→  useEffect(() => {
+   263→    fetchCompletedBills(1, false)
+   264→  }, [fetchCompletedBills])
+   265→
+   266→  const handleLoadMore = () => {
+   267→    const nextPage = pagination.page + 1
+   268→    fetchCompletedBills(nextPage, true)
+   269→  }
+   270→
+   271→  const handleViewInvoice = (bill: any) => {
+   272→    const invoiceData: InvoiceData = {
+   273→      invoiceId: bill.invoiceId,
+   274→      customerName: bill.customerName,
+   275→      customerPhone: bill.customerPhone || undefined,
+   276→      mobileName: bill.mobileName,
+   277→      date: bill.date,
+   278→      items: bill.items?.map((i: any) => ({
+   279→        description: i.description,
+   280→        costPrice: i.costPrice,
+   281→        sellingPrice: i.sellingPrice,
+   282→      })) || [],
+   283→      subtotal: bill.subtotal,
+   284→      discount: bill.discount,
+   285→      grandTotal: bill.grandTotal,
+   286→      amountPaid: bill.amountPaid,
+   287→      balanceDue: bill.balanceDue,
+   288→      shopLogo,
+   289→      shopName: shopInfo.shopName || undefined,
+   290→      shopAddress: shopInfo.shopAddress || undefined,
+   291→      shopTagline: shopInfo.shopTagline || undefined,
+   292→    }
+   293→    setSelectedInvoice(invoiceData)
+   294→    setModalOpen(true)
+   295→  }
+   296→
+   297→  const summaryCards: SummaryCardProps[] = data
+   298→    ? [
+   299→        {
+   300→          title: 'Total Gross Sales',
+   301→          value: formatCurrency(data.totalGrossSales),
+   302→          icon: <DollarSign className="h-5 w-5" />,
+   303→          accentColor: '#10B981',
+   304→          gradientFrom: '#34D399',
+   305→          delay: 0,
+   306→        },
+   307→        {
+   308→          title: 'Total Cash Collected',
+   309→          value: formatCurrency(data.totalCashCollected),
+   310→          icon: <TrendingUp className="h-5 w-5" />,
+   311→          accentColor: '#7C3AED',
+   312→          gradientFrom: '#A78BFA',
+   313→          delay: 0.06,
+   314→        },
+   315→        {
+   316→          title: 'Total Outstanding',
+   317→          value: formatCurrency(data.totalOutstanding),
+   318→          icon: <Clock className="h-5 w-5" />,
+   319→          accentColor: '#F59E0B',
+   320→          gradientFrom: '#FBBF24',
+   321→          delay: 0.12,
+   322→        },
+   323→        {
+   324→          title: 'Total Net Profit',
+   325→          value: formatCurrency(data.totalNetProfit),
+   326→          icon: <BarChart3 className="h-5 w-5" />,
+   327→          accentColor: '#06B6D4',
+   328→          gradientFrom: '#22D3EE',
+   329→          delay: 0.18,
+   330→        },
+   331→      ]
+   332→    : []
+   333→
+   334→  const chartData = data?.trend.map((t) => ({
+   335→    ...t,
+   336→    dateLabel: format(new Date(t.date), 'dd MMM'),
+   337→  })) || []
+   338→
+   339→  if (loading && !data) {
+   340→    return (
+   341→      <div className="flex items-center justify-center h-64">
+   342→        <div className="animate-spin h-8 w-8 border-4 border-[#7C3AED] border-t-transparent rounded-full" />
+   343→      </div>
+   344→    )
+   345→  }
+   346→
+   347→  return (
+   348→    <div className="space-y-4 sm:space-y-6">
+   349→      {/* Date Range Filter */}
+   350→      <motion.div
+   351→        initial={{ opacity: 0, y: 16 }}
+   352→        animate={{ opacity: 1, y: 0 }}
+   353→        transition={{ duration: 0.3 }}
+   354→      >
+   355→        <div className="rounded-2xl border border-[#7C3AED]/20 bg-card overflow-hidden">
+   356→          <div className="p-3 sm:p-4">
+   357→            <div className="flex items-center gap-2 mb-3">
+   358→              <Filter className="h-4 w-4 text-[#7C3AED]" />
+   359→              <span className="text-sm font-bold text-foreground">Filter by Period</span>
+   360→            </div>
+   361→            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none">
+   362→              {RANGE_OPTIONS.map((opt) => (
+   363→                <button
+   364→                  key={opt.value}
+   365→                  onClick={() => setDateRange(opt.value)}
+   366→                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold
+   367→                             transition-all duration-200 whitespace-nowrap flex-shrink-0
+   368→                             ${dateRange === opt.value
+   369→                               ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/25'
+   370→                               : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95'
+   371→                             }`}
+   372→                >
+   373→                  {opt.icon}
+   374→                  {opt.label}
+   375→                </button>
+   376→              ))}
+   377→            </div>
+   378→            {/* Date Picker - shown when "By Date" is selected */}
+   379→            {dateRange === 'date' && (
+   380→              <div className="mt-3 flex items-center gap-2">
+   381→                <Calendar className="h-4 w-4 text-[#7C3AED] flex-shrink-0" />
+   382→                <input
+   383→                  type="date"
+   384→                  value={selectedDate}
+   385→                  onChange={(e) => setSelectedDate(e.target.value)}
+   386→                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground
+   387→                             focus:border-[#7C3AED] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]/30
+   388→                             [color-scheme:dark]"
+   389→                  max={new Date().toISOString().split('T')[0]}
+   390→                />
+   391→              </div>
+   392→            )}
+   393→          </div>
+   394→        </div>
+   395→      </motion.div>
+   396→
+   397→      {/* Summary Cards */}
+   398→      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+   399→        {summaryCards.map((card, idx) => (
+   400→          <SummaryCard key={idx} {...card} />
+   401→        ))}
+   402→      </div>
+   403→
+   404→      {/* Sales & Profit Trend Chart */}
+   405→      <motion.div
+   406→        initial={{ opacity: 0, y: 20 }}
+   407→        animate={{ opacity: 1, y: 0 }}
+   408→        transition={{ duration: 0.4, delay: 0.24 }}
+   409→      >
+   410→        <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card">
+   411→          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA] rounded-l-2xl" />
+   412→          <div
+   413→            className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+   414→            style={{ background: '#7C3AED' }}
+   415→          />
+   416→
+   417→          <div className="p-4 sm:p-5 pl-5 sm:pl-6">
+   418→            <div className="flex items-center gap-3 mb-4">
+   419→              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
+   420→                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#7C3AED]" />
+   421→              </div>
+   422→              <div className="min-w-0">
+   423→                <h3 className="text-foreground font-bold text-sm sm:text-base">Last 7 Days — Sales & Profit</h3>
+   424→                <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">Revenue and profit over time</p>
+   425→              </div>
+   426→            </div>
+   427→          {chartData.length > 0 ? (
+   428→            <div className="h-56 sm:h-72 w-full">
+   429→              <ResponsiveContainer width="100%" height="100%">
+   430→                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+   431→                  <defs>
+   432→                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+   433→                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
+   434→                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+   435→                    </linearGradient>
+   436→                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+   437→                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+   438→                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+   439→                    </linearGradient>
+   440→                  </defs>
+   441→                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+   442→                  <XAxis
+   443→                    dataKey="dateLabel"
+   444→                    tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+   445→                    axisLine={{ stroke: 'var(--border)' }}
+   446→                    tickLine={{ stroke: 'var(--border)' }}
+   447→                  />
+   448→                  <YAxis
+   449→                    tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+   450→                    axisLine={{ stroke: 'var(--border)' }}
+   451→                    tickLine={{ stroke: 'var(--border)' }}
+   452→                    tickFormatter={(val) => `₹${val.toLocaleString('en-IN')}`}
+   453→                    width={55}
+   454→                  />
+   455→                  <Tooltip content={<CustomTooltip />} />
+   456→                  <Area
+   457→                    type="monotone"
+   458→                    dataKey="sales"
+   459→                    name="Sales"
+   460→                    stroke="#7C3AED"
+   461→                    strokeWidth={2}
+   462→                    fillOpacity={1}
+   463→                    fill="url(#salesGradient)"
+   464→                  />
+   465→                  <Area
+   466→                    type="monotone"
+   467→                    dataKey="profit"
+   468→                    name="Profit"
+   469→                    stroke="#10B981"
+   470→                    strokeWidth={2}
+   471→                    fillOpacity={1}
+   472→                    fill="url(#profitGradient)"
+   473→                  />
+   474→                </AreaChart>
+   475→              </ResponsiveContainer>
+   476→            </div>
+   477→          ) : (
+   478→            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+   479→              No trend data available
+   480→            </div>
+   481→          )}
+   482→        </div>
+   483→      </div>
+   484→      </motion.div>
+   485→
+   486→      {/* All Completed Bills */}
+   487→      <motion.div
+   488→        initial={{ opacity: 0, y: 20 }}
+   489→        animate={{ opacity: 1, y: 0 }}
+   490→        transition={{ duration: 0.4, delay: 0.3 }}
+   491→      >
+   492→        <div className="relative rounded-2xl border border-[#10B981]/25 bg-card">
+   493→          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399] rounded-l-2xl" />
+   494→          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+   495→            style={{ background: '#10B981' }}
+   496→          />
+   497→
+   498→          <div className="p-4 sm:p-5 pl-5 sm:pl-6">
+   499→            {/* Section Header */}
+   500→            <div className="flex items-center justify-between mb-4">
+   501→              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+   502→                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
+   503→                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[#10B981]" />
+   504→                </div>
+   505→                <div className="min-w-0">
+   506→                  <h3 className="text-foreground font-bold text-sm sm:text-base">
+   507→                    All Completed Bills
+   508→                  </h3>
+   509→                  <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">
+   510→                    {pagination.total} {pagination.total === 1 ? 'bill' : 'bills'} found
+   511→                  </p>
+   512→                </div>
+   513→              </div>
+   514→              <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/25 text-[10px] sm:text-xs px-2 sm:px-3 py-1 font-bold flex-shrink-0">
+   515→                {pagination.total}
+   516→              </Badge>
+   517→            </div>
+   518→
+   519→            {billsLoading && completedBills.length === 0 ? (
+   520→              <div className="flex items-center justify-center py-12">
+   521→                <Loader2 className="h-6 w-6 text-[#10B981] animate-spin" />
+   522→              </div>
+   523→            ) : completedBills.length === 0 ? (
+   524→              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+   525→                <CheckCircle className="h-10 w-10 mb-2 opacity-30" />
+   526→                <p className="text-sm font-medium">No completed bills for this period</p>
+   527→                <p className="text-xs opacity-70">Try changing the filter above</p>
+   528→              </div>
+   529→            ) : (
+   530→              <>
+   531→                <div
+   532→                  className="overflow-y-auto max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] pr-1
+   533→                             scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent
+   534→                             [-webkit-overflow-scrolling:touch]"
+   535→                  style={{
+   536→                    scrollbarWidth: 'thin',
+   537→                    scrollbarColor: 'rgba(120,120,120,0.2) transparent',
+   538→                  }}
+   539→                >
+   540→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+   541→                    <AnimatePresence mode="popLayout">
+   542→                      {completedBills.map((bill: any, idx: number) => (
+   543→                        <motion.div
+   544→                          key={bill.id}
+   545→                          layout
+   546→                          initial={{ opacity: 0, y: 10 }}
+   547→                          animate={{ opacity: 1, y: 0 }}
+   548→                          exit={{ opacity: 0, scale: 0.95 }}
+   549→                          transition={{ delay: Math.min(idx * 0.02, 0.3), duration: 0.25 }}
+   550→                          className="relative bg-background rounded-xl p-3 sm:p-4 border border-border
+   551→                                      hover:border-[#10B981]/30 transition-all duration-200 group"
+   552→                        >
+   553→                          {/* Customer Name & Mobile */}
+   554→                          <div className="flex items-start justify-between gap-2 mb-1.5 sm:mb-2">
+   555→                            <div className="min-w-0 flex-1">
+   556→                              <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+   557→                                {bill.customerName}
+   558→                              </p>
+   559→                              <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
+   560→                                {bill.mobileName}
+   561→                              </p>
+   562→                            </div>
+   563→                            <Button
+   564→                              variant="ghost"
+   565→                              size="icon"
+   566→                              className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+   567→                              onClick={() => handleViewInvoice(bill)}
+   568→                            >
+   569→                              <Eye className="h-3.5 w-3.5" />
+   570→                            </Button>
+   571→                          </div>
+   572→
+   573→                          {/* Invoice ID & Date */}
+   574→                          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+   575→                            <Receipt className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+   576→                            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono truncate">
+   577→                              {bill.invoiceId}
+   578→                            </span>
+   579→                            <span className="text-[10px] sm:text-xs text-muted-foreground">•</span>
+   580→                            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
+   581→                              {bill.date}
+   582→                            </span>
+   583→                          </div>
+   584→
+   585→                          {/* Grand Total & Payment Status */}
+   586→                          <div className="flex items-center justify-between">
+   587→                            <span className="text-xs sm:text-sm font-extrabold text-foreground">
+   588→                              {formatCurrency(bill.grandTotal)}
+   589→                            </span>
+   590→                            {bill.paymentStatus === 'Paid' ? (
+   591→                              <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+   592→                                Paid
+   593→                              </Badge>
+   594→                            ) : (
+   595→                              <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+   596→                                {bill.paymentStatus}
+   597→                              </Badge>
+   598→                            )}
+   599→                          </div>
+   600→                        </motion.div>
+   601→                      ))}
+   602→                    </AnimatePresence>
+   603→                  </div>
+   604→                </div>
+   605→
+   606→                {/* Load More Button */}
+   607→                {pagination.hasMore && (
+   608→                  <div className="flex justify-center mt-4 pt-3 border-t border-border/40">
+   609→                    <Button
+   610→                      variant="outline"
+   611→                      onClick={handleLoadMore}
+   612→                      disabled={billsLoading}
+   613→                      className="gap-2 text-xs sm:text-sm bg-background hover:bg-[#10B981]/5 hover:border-[#10B981]/30 hover:text-[#10B981] transition-all duration-200"
+   614→                    >
+   615→                      {billsLoading ? (
+   616→                        <Loader2 className="h-4 w-4 animate-spin" />
+   617→                      ) : (
+   618→                        <ChevronDown className="h-4 w-4" />
+   619→                      )}
+   620→                      Load More ({pagination.total - completedBills.length} remaining)
+   621→                    </Button>
+   622→                  </div>
+   623→                )}
+   624→
+   625→                {/* Bills count summary */}
+   626→                <div className="mt-3 text-center">
+   627→                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+   628→                    Showing {completedBills.length} of {pagination.total} bills
+   629→                  </p>
+   630→                </div>
+   631→              </>
+   632→            )}
+   633→          </div>
+   634→        </div>
+   635→      </motion.div>
+   636→
+   637→      {/* Invoice Preview Modal */}
+   638→      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+   639→        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
+   640→          <DialogHeader>
+   641→            <DialogTitle className="text-foreground">Invoice Preview</DialogTitle>
+   642→          </DialogHeader>
+   643→          {selectedInvoice && (
+   644→            <InvoicePreview data={selectedInvoice} showDownload />
+   645→          )}
+   646→        </DialogContent>
+   647→      </Dialog>
+   648→    </div>
+   649→  )
+   650→}
+   651→
