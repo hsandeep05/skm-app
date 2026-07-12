@@ -5,15 +5,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
-    const range = searchParams.get('range') || 'today' // today, week, month, all
+    const range = searchParams.get('range') || 'date' // date, week, month, all
 
     // Calculate date range
     const now = new Date()
     let startDate: string | null = null
     let endDate: string | null = null
 
-    if (range === 'today') {
-      startDate = now.toISOString().split('T')[0]
+    if (range === 'date') {
+      startDate = date || now.toISOString().split('T')[0]
       endDate = startDate
     } else if (range === 'week') {
       // Start from Monday of current week
@@ -27,12 +27,6 @@ export async function GET(request: NextRequest) {
       endDate = now.toISOString().split('T')[0]
     }
     // range === 'all' → no date filter
-
-    // If specific date is provided, override range
-    if (date) {
-      startDate = date
-      endDate = date
-    }
 
     // Build where clause
     const where: any = { status: 'completed' }

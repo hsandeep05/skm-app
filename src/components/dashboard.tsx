@@ -9,12 +9,12 @@ import {
   CheckCircle,
   RefreshCw,
   Eye,
-  Wifi,
-  WifiOff,
   Receipt,
   AlertCircle,
   CalendarDays,
   FileText,
+  Download,
+  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -155,6 +155,8 @@ export function Dashboard() {
   const [modalOpen, setModalOpen] = useState(false)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
   const [shopInfo, setShopInfo] = useState<{ shopName: string; shopAddress: string; shopTagline: string }>({ shopName: '', shopAddress: '', shopTagline: '' })
+  const [lastBackup, setLastBackup] = useState<string>('')
+  const [showExportAlert, setShowExportAlert] = useState(false)
   const { isConnected, lastEvent, requestRefresh } = useRealtime()
 
   // Load shop logo & settings
@@ -213,6 +215,43 @@ export function Dashboard() {
       window.dispatchEvent(new CustomEvent('pending-count', { detail: data.pendingBills }))
     }
   }, [data])
+
+  // Auto-backup every 5 minutes
+  useEffect(() => {
+    const doBackup = async () => {
+      try {
+        const res = await fetch('/api/backup', { method: 'POST' })
+        if (res.ok) {
+          const now = new Date()
+          setLastBackup(now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
+        }
+      } catch (e) {
+        console.error('Auto backup failed:', e)
+      }
+    }
+
+    // Initial backup
+    doBackup()
+
+    // Auto backup every 5 minutes
+    const interval = setInterval(doBackup, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Monthly export alert - check on first day of month or if not exported this month
+  useEffect(() => {
+    const now = new Date()
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const lastExportMonth = localStorage.getItem('skm_lastExportMonth')
+
+    // Show alert if it's a new month and we haven't exported yet
+    if (lastExportMonth !== currentMonth) {
+      // Show on day 1-3 of the month, or if never exported
+      if (now.getDate() <= 3 || !lastExportMonth) {
+        setShowExportAlert(true)
+      }
+    }
+  }, [])
 
   const handleViewInvoice = (bill: any) => {
     const invoiceData: InvoiceData = {
@@ -309,17 +348,16 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Sync Status & Refresh */}
+      {/* Auto Backup Status & Refresh */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {isConnected ? (
-            <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30 gap-1.5 px-3 py-1">
-              <Wifi className="h-3.5 w-3.5" /> Online
-            </Badge>
-          ) : (
-            <Badge className="bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30 gap-1.5 px-3 py-1">
-              <WifiOff className="h-3.5 w-3.5" /> Offline
-            </Badge>
+          <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30 gap-1.5 px-3 py-1">
+            <CheckCircle className="h-3.5 w-3.5" /> Auto Backup On
+          </Badge>
+          {lastBackup && (
+            <span className="text-[10px] text-muted-foreground">
+              Last: {lastBackup}
+            </span>
           )}
         </div>
         <Button
@@ -335,6 +373,75 @@ export function Dashboard() {
           <RefreshCw className="h-3.5 w-3.5" /> Force Refresh
         </Button>
       </div>
+
+      {/* Monthly Export Alert */}
+      {showExportAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-[#7C3AED]/30 bg-[#7C3AED]/5 p-4"
+        >
+          <div className="flex items-start gap-3">
+            <div className="h-9 w-9 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Download className="h-4 w-4 text-[#7C3AED]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-foreground">Monthly Export Reminder</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                It&apos;s a new month! Export last month&apos;s bill sheet for your records.
+              </p>
+              <div className="flex items-center gap-2 mt-2.5">
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const now = new Date()
+                      const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth()
+                      const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+                      const startDate = `${year}-${String(lastMonth).padStart(2, '0')}-01`
+                      const lastDay = new Date(year, lastMonth, 0).getDate()
+                      const endDate = `${year}-${String(lastMonth).padStart(2, '0')}-${lastDay}`
+
+                      const res = await fetch(`/api/export?startDate=${startDate}&endDate=${endDate}`)
+                      if (res.ok) {
+                        const blob = await res.blob()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `SKM_Bills_${year}-${String(lastMonth).padStart(2, '0')}.csv`
+                        a.click()
+                        URL.revokeObjectURL(url)
+
+                        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                        localStorage.setItem('skm_lastExportMonth', currentMonth)
+                        setShowExportAlert(false)
+                      }
+                    } catch (e) {
+                      console.error('Export failed:', e)
+                    }
+                  }}
+                  className="bg-[#7C3AED] hover:bg-[#7C3AED]/90 text-white gap-1.5 h-8 text-xs"
+                >
+                  <Download className="h-3.5 w-3.5" /> Export CSV
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const now = new Date()
+                    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                    localStorage.setItem('skm_lastExportMonth', currentMonth)
+                    setShowExportAlert(false)
+                  }}
+                  className="text-muted-foreground hover:text-foreground h-8 text-xs"
+                >
+                  Remind Later
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">

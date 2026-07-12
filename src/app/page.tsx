@@ -331,33 +331,33 @@ export default function SriKrishnaApp() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50">
         {/* Background bar */}
         <div className="bg-card/95 backdrop-blur-xl border-t border-border/40 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.12)]">
-          <div className="flex items-end justify-around px-2 pt-2 pb-2 safe-area-bottom">
+          <div className="flex items-end justify-around px-1 sm:px-2 pt-1.5 pb-1.5 safe-area-bottom" style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}>
             {/* Home */}
             <button
               onClick={() => handleTabChange('dashboard')}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[52px] ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all duration-200 min-w-[44px] ${
                 activeTab === 'dashboard'
                   ? 'text-[#7C3AED]'
                   : 'text-muted-foreground/70 active:scale-95'
               }`}
             >
-              <Home className={`h-5 w-5 transition-all duration-200 ${activeTab === 'dashboard' ? 'scale-110' : ''}`} />
-              <span className="text-[10px] font-semibold leading-tight">Home</span>
+              <Home className={`h-4.5 w-4.5 transition-all duration-200 ${activeTab === 'dashboard' ? 'scale-110' : ''}`} />
+              <span className="text-[9px] font-semibold leading-tight">Home</span>
             </button>
 
             {/* Pending Bills */}
             <button
               onClick={() => handleTabChange('pending')}
-              className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[52px] ${
+              className={`relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all duration-200 min-w-[44px] ${
                 activeTab === 'pending'
                   ? 'text-[#7C3AED]'
                   : 'text-muted-foreground/70 active:scale-95'
               }`}
             >
-              <Clock className={`h-5 w-5 transition-all duration-200 ${activeTab === 'pending' ? 'scale-110' : ''}`} />
-              <span className="text-[10px] font-semibold leading-tight">Pending</span>
+              <Clock className={`h-4.5 w-4.5 transition-all duration-200 ${activeTab === 'pending' ? 'scale-110' : ''}`} />
+              <span className="text-[9px] font-semibold leading-tight">Pending</span>
               {pendingCount > 0 && (
-                <Badge className="absolute -top-1 right-0 bg-[#F59E0B] text-black border-0 text-[9px] h-4 min-w-[16px] px-1 font-bold animate-badge-pulse">
+                <Badge className="absolute -top-0.5 right-0.5 bg-[#F59E0B] text-black border-0 text-[8px] h-3.5 min-w-[14px] px-0.5 font-bold animate-badge-pulse">
                   {pendingCount}
                 </Badge>
               )}
@@ -366,16 +366,16 @@ export default function SriKrishnaApp() {
             {/* Center FAB - Create New Bill */}
             <button
               onClick={() => handleTabChange('billing')}
-              className="relative flex flex-col items-center -mt-5"
+              className="relative flex flex-col items-center -mt-4"
             >
-              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+              <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
                 activeTab === 'billing'
                   ? 'bg-[#7C3AED] shadow-[#7C3AED]/40 shadow-xl scale-110'
                   : 'bg-[#7C3AED] shadow-[#7C3AED]/30 hover:shadow-xl hover:shadow-[#7C3AED]/40 hover:scale-105 active:scale-95'
               }`}>
-                <Plus className="h-6 w-6 text-white" />
+                <Plus className="h-5 w-5 text-white" />
               </div>
-              <span className={`text-[10px] font-bold leading-tight mt-0.5 ${
+              <span className={`text-[9px] font-bold leading-tight mt-0.5 ${
                 activeTab === 'billing' ? 'text-[#7C3AED]' : 'text-[#7C3AED]/80'
               }`}>
                 New Bill
@@ -385,27 +385,27 @@ export default function SriKrishnaApp() {
             {/* Unlocking */}
             <button
               onClick={() => handleTabChange('unlocking')}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[52px] ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all duration-200 min-w-[44px] ${
                 activeTab === 'unlocking'
                   ? 'text-[#F59E0B]'
                   : 'text-muted-foreground/70 active:scale-95'
               }`}
             >
-              <Unlock className={`h-5 w-5 transition-all duration-200 ${activeTab === 'unlocking' ? 'scale-110' : ''}`} />
-              <span className="text-[10px] font-semibold leading-tight">Unlock</span>
+              <Unlock className={`h-4.5 w-4.5 transition-all duration-200 ${activeTab === 'unlocking' ? 'scale-110' : ''}`} />
+              <span className="text-[9px] font-semibold leading-tight">Unlock</span>
             </button>
 
             {/* Analytics */}
             <button
               onClick={() => handleTabChange('analytics')}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[52px] ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all duration-200 min-w-[44px] ${
                 activeTab === 'analytics'
                   ? 'text-[#10B981]'
                   : 'text-muted-foreground/70 active:scale-95'
               }`}
             >
-              <BarChart3 className={`h-5 w-5 transition-all duration-200 ${activeTab === 'analytics' ? 'scale-110' : ''}`} />
-              <span className="text-[10px] font-semibold leading-tight">Reports</span>
+              <BarChart3 className={`h-4.5 w-4.5 transition-all duration-200 ${activeTab === 'analytics' ? 'scale-110' : ''}`} />
+              <span className="text-[9px] font-semibold leading-tight">Reports</span>
             </button>
           </div>
         </div>

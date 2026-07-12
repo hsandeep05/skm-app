@@ -1,0 +1,631 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { format } from 'date-fns'
+     6→import { DollarSign, TrendingUp, Clock, BarChart3, CheckCircle, Eye, FileText, Receipt, ChevronDown, Loader2, Calendar, Filter } from 'lucide-react'
+     7→import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+     8→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     9→import { Badge } from '@/components/ui/badge'
+    10→import { Button } from '@/components/ui/button'
+    11→import {
+    12→  Dialog,
+    13→  DialogContent,
+    14→  DialogHeader,
+    15→  DialogTitle,
+    16→} from '@/components/ui/dialog'
+    17→import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
+    18→
+    19→type DateRange = 'today' | 'week' | 'month' | 'all'
+    20→
+    21→interface AnalyticsData {
+    22→  date: string
+    23→  range: string
+    24→  totalGrossSales: number
+    25→  totalCashCollected: number
+    26→  totalOutstanding: number
+    27→  totalNetProfit: number
+    28→  invoiceCount: number
+    29→  trend: {
+    30→    date: string
+    31→    sales: number
+    32→    profit: number
+    33→    count: number
+    34→  }[]
+    35→}
+    36→
+    37→interface Pagination {
+    38→  page: number
+    39→  limit: number
+    40→  total: number
+    41→  totalPages: number
+    42→  hasMore: boolean
+    43→}
+    44→
+    45→function formatCurrency(amount: number): string {
+    46→  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    47→}
+    48→
+    49→interface SummaryCardProps {
+    50→  title: string
+    51→  value: string
+    52→  icon: React.ReactNode
+    53→  accentColor: string
+    54→  gradientFrom: string
+    55→  delay?: number
+    56→}
+    57→
+    58→function SummaryCard({ title, value, icon, accentColor, gradientFrom, delay = 0 }: SummaryCardProps) {
+    59→  const [hovered, setHovered] = useState(false)
+    60→
+    61→  return (
+    62→    <motion.div
+    63→      initial={{ opacity: 0, y: 24 }}
+    64→      animate={{ opacity: 1, y: 0 }}
+    65→      transition={{ duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
+    66→    >
+    67→      <div
+    68→        className="group relative overflow-hidden rounded-2xl border bg-card
+    69→                    transition-all duration-300 ease-out
+    70→                    hover:-translate-y-1
+    71→                    cursor-default"
+    72→        style={{
+    73→          borderColor: hovered ? 'transparent' : undefined,
+    74→          boxShadow: hovered
+    75→            ? `0 8px 30px -8px ${accentColor}35, 0 0 20px -6px ${accentColor}20`
+    76→            : undefined,
+    77→        }}
+    78→        onMouseEnter={() => setHovered(true)}
+    79→        onMouseLeave={() => setHovered(false)}
+    80→      >
+    81→        <div
+    82→          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+    83→          style={{
+    84→            opacity: hovered ? 1 : 0,
+    85→            background: `linear-gradient(135deg, ${accentColor}08 0%, transparent 60%)`,
+    86→          }}
+    87→        />
+    88→        <div
+    89→          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+    90→          style={{
+    91→            backgroundImage: `radial-gradient(circle, ${accentColor} 1px, transparent 1px)`,
+    92→            backgroundSize: '16px 16px',
+    93→          }}
+    94→        />
+    95→        <div
+    96→          className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-[0.07] dark:opacity-[0.1] pointer-events-none blur-2xl"
+    97→          style={{
+    98→            background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
+    99→          }}
+   100→        />
+   101→        <div
+   102→          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+   103→          style={{
+   104→            background: `linear-gradient(180deg, ${accentColor}, ${gradientFrom})`,
+   105→          }}
+   106→        />
+   107→
+   108→        <div className="relative p-3 pl-4 sm:p-5 sm:pl-6">
+   109→          <div className="flex items-start justify-between gap-2 sm:gap-3">
+   110→            <div className="min-w-0 flex-1">
+   111→              <p
+   112→                className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.08em] sm:tracking-[0.1em] truncate"
+   113→                style={{ color: accentColor }}
+   114→              >
+   115→                {title}
+   116→              </p>
+   117→              <p className="text-sm sm:text-xl md:text-2xl font-extrabold text-foreground mt-1 sm:mt-2 tracking-tight truncate leading-none">
+   118→                {value}
+   119→              </p>
+   120→            </div>
+   121→            <div
+   122→              className="relative h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0
+   123→                          transition-all duration-300"
+   124→              style={{
+   125→                background: `linear-gradient(135deg, ${accentColor}${hovered ? '25' : '18'}, ${accentColor}${hovered ? '12' : '08'})`,
+   126→                transform: hovered ? 'scale(1.1)' : undefined,
+   127→                boxShadow: hovered
+   128→                  ? `0 0 20px -4px ${accentColor}40, 0 0 8px -2px ${accentColor}25`
+   129→                  : 'none',
+   130→              }}
+   131→            >
+   132→              <div
+   133→                className="absolute inset-[2px] rounded-full border transition-colors duration-300"
+   134→                style={{ borderColor: `${accentColor}${hovered ? '35' : '20'}` }}
+   135→              />
+   136→              <div className="scale-75 sm:scale-100" style={{ color: accentColor }}>{icon}</div>
+   137→            </div>
+   138→          </div>
+   139→        </div>
+   140→      </div>
+   141→    </motion.div>
+   142→  )
+   143→}
+   144→
+   145→// Custom tooltip for recharts
+   146→function CustomTooltip({ active, payload, label }: any) {
+   147→  if (active && payload && payload.length) {
+   148→    return (
+   149→      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+   150→        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+   151→        {payload.map((entry: any, idx: number) => (
+   152→          <p key={idx} className="text-xs font-semibold" style={{ color: entry.color }}>
+   153→            {entry.name}: {formatCurrency(entry.value)}
+   154→          </p>
+   155→        ))}
+   156→      </div>
+   157→    )
+   158→  }
+   159→  return null
+   160→}
+   161→
+   162→const RANGE_OPTIONS: { value: DateRange; label: string; icon: React.ReactNode }[] = [
+   163→  { value: 'today', label: 'Today', icon: <Calendar className="h-3.5 w-3.5" /> },
+   164→  { value: 'week', label: 'This Week', icon: <Calendar className="h-3.5 w-3.5" /> },
+   165→  { value: 'month', label: 'This Month', icon: <Calendar className="h-3.5 w-3.5" /> },
+   166→  { value: 'all', label: 'All Time', icon: <BarChart3 className="h-3.5 w-3.5" /> },
+   167→]
+   168→
+   169→export function Analytics() {
+   170→  const [dateRange, setDateRange] = useState<DateRange>('today')
+   171→  const [data, setData] = useState<AnalyticsData | null>(null)
+   172→  const [loading, setLoading] = useState(true)
+   173→  const [completedBills, setCompletedBills] = useState<any[]>([])
+   174→  const [billsLoading, setBillsLoading] = useState(false)
+   175→  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0, hasMore: false })
+   176→  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
+   177→  const [modalOpen, setModalOpen] = useState(false)
+   178→  const [shopLogo, setShopLogo] = useState<string | null>(null)
+   179→  const [shopInfo, setShopInfo] = useState<{ shopName: string; shopAddress: string; shopTagline: string }>({ shopName: '', shopAddress: '', shopTagline: '' })
+   180→
+   181→  const fetchAnalytics = useCallback(async () => {
+   182→    setLoading(true)
+   183→    try {
+   184→      const res = await fetch(`/api/analytics?range=${dateRange}`)
+   185→      if (res.ok) {
+   186→        const json = await res.json()
+   187→        setData(json)
+   188→      }
+   189→    } catch (err) {
+   190→      console.error('Failed to fetch analytics:', err)
+   191→    } finally {
+   192→      setLoading(false)
+   193→    }
+   194→  }, [dateRange])
+   195→
+   196→  const fetchCompletedBills = useCallback(async (page: number, append: boolean = false) => {
+   197→    if (!append) setBillsLoading(true)
+   198→    try {
+   199→      // Calculate date range for filtering bills
+   200→      const now = new Date()
+   201→      let startDate = ''
+   202→      let endDate = ''
+   203→
+   204→      if (dateRange === 'today') {
+   205→        startDate = now.toISOString().split('T')[0]
+   206→        endDate = startDate
+   207→      } else if (dateRange === 'week') {
+   208→        const dayOfWeek = now.getDay()
+   209→        const monday = new Date(now)
+   210→        monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+   211→        startDate = monday.toISOString().split('T')[0]
+   212→        endDate = now.toISOString().split('T')[0]
+   213→      } else if (dateRange === 'month') {
+   214→        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+   215→        endDate = now.toISOString().split('T')[0]
+   216→      }
+   217→      // 'all' = no date filter
+   218→
+   219→      let url = `/api/invoices?status=completed&page=${page}&limit=10`
+   220→      if (startDate && endDate) {
+   221→        url += `&startDate=${startDate}&endDate=${endDate}`
+   222→      }
+   223→
+   224→      const res = await fetch(url)
+   225→      if (res.ok) {
+   226→        const json = await res.json()
+   227→        if (append) {
+   228→          setCompletedBills(prev => [...prev, ...(json.invoices || [])])
+   229→        } else {
+   230→          setCompletedBills(json.invoices || [])
+   231→        }
+   232→        setPagination(json.pagination || { page, limit: 10, total: 0, totalPages: 0, hasMore: false })
+   233→      }
+   234→    } catch (err) {
+   235→      console.error('Failed to fetch completed bills:', err)
+   236→    } finally {
+   237→      setBillsLoading(false)
+   238→    }
+   239→  }, [dateRange])
+   240→
+   241→  // Load shop logo & settings
+   242→  useEffect(() => {
+   243→    fetch('/api/logo')
+   244→      .then(res => res.json())
+   245→      .then(d => { if (d.logo) setShopLogo(d.logo) })
+   246→      .catch(() => {})
+   247→    fetch('/api/shop-settings')
+   248→      .then(res => res.ok ? res.json() : null)
+   249→      .then(d => { if (d) setShopInfo({ shopName: d.shopName || '', shopAddress: d.shopAddress || '', shopTagline: d.shopTagline || '' }) })
+   250→      .catch(() => {})
+   251→  }, [])
+   252→
+   253→  useEffect(() => {
+   254→    fetchAnalytics()
+   255→  }, [fetchAnalytics])
+   256→
+   257→  useEffect(() => {
+   258→    fetchCompletedBills(1, false)
+   259→  }, [fetchCompletedBills])
+   260→
+   261→  const handleLoadMore = () => {
+   262→    const nextPage = pagination.page + 1
+   263→    fetchCompletedBills(nextPage, true)
+   264→  }
+   265→
+   266→  const handleViewInvoice = (bill: any) => {
+   267→    const invoiceData: InvoiceData = {
+   268→      invoiceId: bill.invoiceId,
+   269→      customerName: bill.customerName,
+   270→      customerPhone: bill.customerPhone || undefined,
+   271→      mobileName: bill.mobileName,
+   272→      date: bill.date,
+   273→      items: bill.items?.map((i: any) => ({
+   274→        description: i.description,
+   275→        costPrice: i.costPrice,
+   276→        sellingPrice: i.sellingPrice,
+   277→      })) || [],
+   278→      subtotal: bill.subtotal,
+   279→      discount: bill.discount,
+   280→      grandTotal: bill.grandTotal,
+   281→      amountPaid: bill.amountPaid,
+   282→      balanceDue: bill.balanceDue,
+   283→      shopLogo,
+   284→      shopName: shopInfo.shopName || undefined,
+   285→      shopAddress: shopInfo.shopAddress || undefined,
+   286→      shopTagline: shopInfo.shopTagline || undefined,
+   287→    }
+   288→    setSelectedInvoice(invoiceData)
+   289→    setModalOpen(true)
+   290→  }
+   291→
+   292→  const summaryCards: SummaryCardProps[] = data
+   293→    ? [
+   294→        {
+   295→          title: 'Total Gross Sales',
+   296→          value: formatCurrency(data.totalGrossSales),
+   297→          icon: <DollarSign className="h-5 w-5" />,
+   298→          accentColor: '#10B981',
+   299→          gradientFrom: '#34D399',
+   300→          delay: 0,
+   301→        },
+   302→        {
+   303→          title: 'Total Cash Collected',
+   304→          value: formatCurrency(data.totalCashCollected),
+   305→          icon: <TrendingUp className="h-5 w-5" />,
+   306→          accentColor: '#7C3AED',
+   307→          gradientFrom: '#A78BFA',
+   308→          delay: 0.06,
+   309→        },
+   310→        {
+   311→          title: 'Total Outstanding',
+   312→          value: formatCurrency(data.totalOutstanding),
+   313→          icon: <Clock className="h-5 w-5" />,
+   314→          accentColor: '#F59E0B',
+   315→          gradientFrom: '#FBBF24',
+   316→          delay: 0.12,
+   317→        },
+   318→        {
+   319→          title: 'Total Net Profit',
+   320→          value: formatCurrency(data.totalNetProfit),
+   321→          icon: <BarChart3 className="h-5 w-5" />,
+   322→          accentColor: '#06B6D4',
+   323→          gradientFrom: '#22D3EE',
+   324→          delay: 0.18,
+   325→        },
+   326→      ]
+   327→    : []
+   328→
+   329→  const chartData = data?.trend.map((t) => ({
+   330→    ...t,
+   331→    dateLabel: format(new Date(t.date), 'dd MMM'),
+   332→  })) || []
+   333→
+   334→  if (loading && !data) {
+   335→    return (
+   336→      <div className="flex items-center justify-center h-64">
+   337→        <div className="animate-spin h-8 w-8 border-4 border-[#7C3AED] border-t-transparent rounded-full" />
+   338→      </div>
+   339→    )
+   340→  }
+   341→
+   342→  return (
+   343→    <div className="space-y-4 sm:space-y-6">
+   344→      {/* Date Range Filter */}
+   345→      <motion.div
+   346→        initial={{ opacity: 0, y: 16 }}
+   347→        animate={{ opacity: 1, y: 0 }}
+   348→        transition={{ duration: 0.3 }}
+   349→      >
+   350→        <div className="rounded-2xl border border-[#7C3AED]/20 bg-card overflow-hidden">
+   351→          <div className="p-3 sm:p-4">
+   352→            <div className="flex items-center gap-2 mb-3">
+   353→              <Filter className="h-4 w-4 text-[#7C3AED]" />
+   354→              <span className="text-sm font-bold text-foreground">Filter by Period</span>
+   355→            </div>
+   356→            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none">
+   357→              {RANGE_OPTIONS.map((opt) => (
+   358→                <button
+   359→                  key={opt.value}
+   360→                  onClick={() => setDateRange(opt.value)}
+   361→                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold
+   362→                             transition-all duration-200 whitespace-nowrap flex-shrink-0
+   363→                             ${dateRange === opt.value
+   364→                               ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/25'
+   365→                               : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95'
+   366→                             }`}
+   367→                >
+   368→                  {opt.icon}
+   369→                  {opt.label}
+   370→                </button>
+   371→              ))}
+   372→            </div>
+   373→          </div>
+   374→        </div>
+   375→      </motion.div>
+   376→
+   377→      {/* Summary Cards */}
+   378→      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+   379→        {summaryCards.map((card, idx) => (
+   380→          <SummaryCard key={idx} {...card} />
+   381→        ))}
+   382→      </div>
+   383→
+   384→      {/* Sales & Profit Trend Chart */}
+   385→      <motion.div
+   386→        initial={{ opacity: 0, y: 20 }}
+   387→        animate={{ opacity: 1, y: 0 }}
+   388→        transition={{ duration: 0.4, delay: 0.24 }}
+   389→      >
+   390→        <div className="relative overflow-hidden rounded-2xl border border-[#7C3AED]/25 bg-card">
+   391→          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA] rounded-l-2xl" />
+   392→          <div
+   393→            className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+   394→            style={{ background: '#7C3AED' }}
+   395→          />
+   396→
+   397→          <div className="p-4 sm:p-5 pl-5 sm:pl-6">
+   398→            <div className="flex items-center gap-3 mb-4">
+   399→              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
+   400→                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#7C3AED]" />
+   401→              </div>
+   402→              <div className="min-w-0">
+   403→                <h3 className="text-foreground font-bold text-sm sm:text-base">Last 7 Days — Sales & Profit</h3>
+   404→                <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">Revenue and profit over time</p>
+   405→              </div>
+   406→            </div>
+   407→          {chartData.length > 0 ? (
+   408→            <div className="h-56 sm:h-72 w-full">
+   409→              <ResponsiveContainer width="100%" height="100%">
+   410→                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+   411→                  <defs>
+   412→                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+   413→                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
+   414→                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+   415→                    </linearGradient>
+   416→                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+   417→                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+   418→                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+   419→                    </linearGradient>
+   420→                  </defs>
+   421→                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+   422→                  <XAxis
+   423→                    dataKey="dateLabel"
+   424→                    tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+   425→                    axisLine={{ stroke: 'var(--border)' }}
+   426→                    tickLine={{ stroke: 'var(--border)' }}
+   427→                  />
+   428→                  <YAxis
+   429→                    tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+   430→                    axisLine={{ stroke: 'var(--border)' }}
+   431→                    tickLine={{ stroke: 'var(--border)' }}
+   432→                    tickFormatter={(val) => `₹${val.toLocaleString('en-IN')}`}
+   433→                    width={55}
+   434→                  />
+   435→                  <Tooltip content={<CustomTooltip />} />
+   436→                  <Area
+   437→                    type="monotone"
+   438→                    dataKey="sales"
+   439→                    name="Sales"
+   440→                    stroke="#7C3AED"
+   441→                    strokeWidth={2}
+   442→                    fillOpacity={1}
+   443→                    fill="url(#salesGradient)"
+   444→                  />
+   445→                  <Area
+   446→                    type="monotone"
+   447→                    dataKey="profit"
+   448→                    name="Profit"
+   449→                    stroke="#10B981"
+   450→                    strokeWidth={2}
+   451→                    fillOpacity={1}
+   452→                    fill="url(#profitGradient)"
+   453→                  />
+   454→                </AreaChart>
+   455→              </ResponsiveContainer>
+   456→            </div>
+   457→          ) : (
+   458→            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+   459→              No trend data available
+   460→            </div>
+   461→          )}
+   462→        </div>
+   463→      </div>
+   464→      </motion.div>
+   465→
+   466→      {/* All Completed Bills */}
+   467→      <motion.div
+   468→        initial={{ opacity: 0, y: 20 }}
+   469→        animate={{ opacity: 1, y: 0 }}
+   470→        transition={{ duration: 0.4, delay: 0.3 }}
+   471→      >
+   472→        <div className="relative rounded-2xl border border-[#10B981]/25 bg-card">
+   473→          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399] rounded-l-2xl" />
+   474→          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+   475→            style={{ background: '#10B981' }}
+   476→          />
+   477→
+   478→          <div className="p-4 sm:p-5 pl-5 sm:pl-6">
+   479→            {/* Section Header */}
+   480→            <div className="flex items-center justify-between mb-4">
+   481→              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+   482→                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
+   483→                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[#10B981]" />
+   484→                </div>
+   485→                <div className="min-w-0">
+   486→                  <h3 className="text-foreground font-bold text-sm sm:text-base">
+   487→                    All Completed Bills
+   488→                  </h3>
+   489→                  <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5">
+   490→                    {pagination.total} {pagination.total === 1 ? 'bill' : 'bills'} found
+   491→                  </p>
+   492→                </div>
+   493→              </div>
+   494→              <Badge className="bg-[#10B981]/15 text-[#10B981] border-[#10B981]/25 text-[10px] sm:text-xs px-2 sm:px-3 py-1 font-bold flex-shrink-0">
+   495→                {pagination.total}
+   496→              </Badge>
+   497→            </div>
+   498→
+   499→            {billsLoading && completedBills.length === 0 ? (
+   500→              <div className="flex items-center justify-center py-12">
+   501→                <Loader2 className="h-6 w-6 text-[#10B981] animate-spin" />
+   502→              </div>
+   503→            ) : completedBills.length === 0 ? (
+   504→              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+   505→                <CheckCircle className="h-10 w-10 mb-2 opacity-30" />
+   506→                <p className="text-sm font-medium">No completed bills for this period</p>
+   507→                <p className="text-xs opacity-70">Try changing the filter above</p>
+   508→              </div>
+   509→            ) : (
+   510→              <>
+   511→                <div
+   512→                  className="overflow-y-auto max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] pr-1
+   513→                             scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent
+   514→                             [-webkit-overflow-scrolling:touch]"
+   515→                  style={{
+   516→                    scrollbarWidth: 'thin',
+   517→                    scrollbarColor: 'rgba(120,120,120,0.2) transparent',
+   518→                  }}
+   519→                >
+   520→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+   521→                    <AnimatePresence mode="popLayout">
+   522→                      {completedBills.map((bill: any, idx: number) => (
+   523→                        <motion.div
+   524→                          key={bill.id}
+   525→                          layout
+   526→                          initial={{ opacity: 0, y: 10 }}
+   527→                          animate={{ opacity: 1, y: 0 }}
+   528→                          exit={{ opacity: 0, scale: 0.95 }}
+   529→                          transition={{ delay: Math.min(idx * 0.02, 0.3), duration: 0.25 }}
+   530→                          className="relative bg-background rounded-xl p-3 sm:p-4 border border-border
+   531→                                      hover:border-[#10B981]/30 transition-all duration-200 group"
+   532→                        >
+   533→                          {/* Customer Name & Mobile */}
+   534→                          <div className="flex items-start justify-between gap-2 mb-1.5 sm:mb-2">
+   535→                            <div className="min-w-0 flex-1">
+   536→                              <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+   537→                                {bill.customerName}
+   538→                              </p>
+   539→                              <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
+   540→                                {bill.mobileName}
+   541→                              </p>
+   542→                            </div>
+   543→                            <Button
+   544→                              variant="ghost"
+   545→                              size="icon"
+   546→                              className="h-7 w-7 flex-shrink-0 text-[#7C3AED] hover:bg-[#7C3AED]/10 active:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+   547→                              onClick={() => handleViewInvoice(bill)}
+   548→                            >
+   549→                              <Eye className="h-3.5 w-3.5" />
+   550→                            </Button>
+   551→                          </div>
+   552→
+   553→                          {/* Invoice ID & Date */}
+   554→                          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+   555→                            <Receipt className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+   556→                            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono truncate">
+   557→                              {bill.invoiceId}
+   558→                            </span>
+   559→                            <span className="text-[10px] sm:text-xs text-muted-foreground">•</span>
+   560→                            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
+   561→                              {bill.date}
+   562→                            </span>
+   563→                          </div>
+   564→
+   565→                          {/* Grand Total & Payment Status */}
+   566→                          <div className="flex items-center justify-between">
+   567→                            <span className="text-xs sm:text-sm font-extrabold text-foreground">
+   568→                              {formatCurrency(bill.grandTotal)}
+   569→                            </span>
+   570→                            {bill.paymentStatus === 'Paid' ? (
+   571→                              <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+   572→                                Paid
+   573→                              </Badge>
+   574→                            ) : (
+   575→                              <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+   576→                                {bill.paymentStatus}
+   577→                              </Badge>
+   578→                            )}
+   579→                          </div>
+   580→                        </motion.div>
+   581→                      ))}
+   582→                    </AnimatePresence>
+   583→                  </div>
+   584→                </div>
+   585→
+   586→                {/* Load More Button */}
+   587→                {pagination.hasMore && (
+   588→                  <div className="flex justify-center mt-4 pt-3 border-t border-border/40">
+   589→                    <Button
+   590→                      variant="outline"
+   591→                      onClick={handleLoadMore}
+   592→                      disabled={billsLoading}
+   593→                      className="gap-2 text-xs sm:text-sm bg-background hover:bg-[#10B981]/5 hover:border-[#10B981]/30 hover:text-[#10B981] transition-all duration-200"
+   594→                    >
+   595→                      {billsLoading ? (
+   596→                        <Loader2 className="h-4 w-4 animate-spin" />
+   597→                      ) : (
+   598→                        <ChevronDown className="h-4 w-4" />
+   599→                      )}
+   600→                      Load More ({pagination.total - completedBills.length} remaining)
+   601→                    </Button>
+   602→                  </div>
+   603→                )}
+   604→
+   605→                {/* Bills count summary */}
+   606→                <div className="mt-3 text-center">
+   607→                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+   608→                    Showing {completedBills.length} of {pagination.total} bills
+   609→                  </p>
+   610→                </div>
+   611→              </>
+   612→            )}
+   613→          </div>
+   614→        </div>
+   615→      </motion.div>
+   616→
+   617→      {/* Invoice Preview Modal */}
+   618→      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+   619→        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
+   620→          <DialogHeader>
+   621→            <DialogTitle className="text-foreground">Invoice Preview</DialogTitle>
+   622→          </DialogHeader>
+   623→          {selectedInvoice && (
+   624→            <InvoicePreview data={selectedInvoice} showDownload />
+   625→          )}
+   626→        </DialogContent>
+   627→      </Dialog>
+   628→    </div>
+   629→  )
+   630→}
+   631→

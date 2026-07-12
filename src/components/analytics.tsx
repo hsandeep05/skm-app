@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
 
-type DateRange = 'today' | 'week' | 'month' | 'all'
+type DateRange = 'date' | 'week' | 'month' | 'all'
 
 interface AnalyticsData {
   date: string
@@ -160,14 +160,15 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 const RANGE_OPTIONS: { value: DateRange; label: string; icon: React.ReactNode }[] = [
-  { value: 'today', label: 'Today', icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: 'date', label: 'By Date', icon: <Calendar className="h-3.5 w-3.5" /> },
   { value: 'week', label: 'This Week', icon: <Calendar className="h-3.5 w-3.5" /> },
   { value: 'month', label: 'This Month', icon: <Calendar className="h-3.5 w-3.5" /> },
   { value: 'all', label: 'All Time', icon: <BarChart3 className="h-3.5 w-3.5" /> },
 ]
 
 export function Analytics() {
-  const [dateRange, setDateRange] = useState<DateRange>('today')
+  const [dateRange, setDateRange] = useState<DateRange>('date')
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [completedBills, setCompletedBills] = useState<any[]>([])
@@ -181,7 +182,11 @@ export function Analytics() {
   const fetchAnalytics = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/analytics?range=${dateRange}`)
+      let url = `/api/analytics?range=${dateRange}`
+      if (dateRange === 'date') {
+        url = `/api/analytics?date=${selectedDate}`
+      }
+      const res = await fetch(url)
       if (res.ok) {
         const json = await res.json()
         setData(json)
@@ -191,7 +196,7 @@ export function Analytics() {
     } finally {
       setLoading(false)
     }
-  }, [dateRange])
+  }, [dateRange, selectedDate])
 
   const fetchCompletedBills = useCallback(async (page: number, append: boolean = false) => {
     if (!append) setBillsLoading(true)
@@ -201,9 +206,9 @@ export function Analytics() {
       let startDate = ''
       let endDate = ''
 
-      if (dateRange === 'today') {
-        startDate = now.toISOString().split('T')[0]
-        endDate = startDate
+      if (dateRange === 'date') {
+        startDate = selectedDate
+        endDate = selectedDate
       } else if (dateRange === 'week') {
         const dayOfWeek = now.getDay()
         const monday = new Date(now)
@@ -236,7 +241,7 @@ export function Analytics() {
     } finally {
       setBillsLoading(false)
     }
-  }, [dateRange])
+  }, [dateRange, selectedDate])
 
   // Load shop logo & settings
   useEffect(() => {
@@ -370,6 +375,21 @@ export function Analytics() {
                 </button>
               ))}
             </div>
+            {/* Date Picker - shown when "By Date" is selected */}
+            {dateRange === 'date' && (
+              <div className="mt-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-[#7C3AED] flex-shrink-0" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground
+                             focus:border-[#7C3AED] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]/30
+                             [color-scheme:dark]"
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
