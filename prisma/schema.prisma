@@ -23,6 +23,7 @@ model Invoice {
   balanceDue     Float    @default(0)
   calculatedNetProfit Float @default(0)
   paymentStatus  String   @default("Pending")
+  paymentMethod  String   @default("Cash")
   status         String   @default("pending")
   updatedBy      String   @default("operator_primary")
   createdAt      DateTime @default(now())

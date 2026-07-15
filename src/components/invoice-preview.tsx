@@ -28,6 +28,7 @@ export interface InvoiceData {
   shopName?: string
   shopAddress?: string
   shopTagline?: string
+  paymentMethod?: string
 }
 
 function formatCurrency(amount: number): string {
@@ -207,6 +208,12 @@ export function InvoicePreview({ data, showDownload = false }: { data: InvoiceDa
               <span>Amount Paid:</span>
               <span>{formatCurrency(data.amountPaid)}</span>
             </div>
+            {data.paymentMethod && (
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Payment Method</span>
+                <span className="font-medium text-gray-800">{data.paymentMethod}</span>
+              </div>
+            )}
             <div
               className="flex justify-between py-1 font-bold border-t border-gray-300"
               style={{ color: data.balanceDue <= 0 ? '#10B981' : '#F59E0B' }}

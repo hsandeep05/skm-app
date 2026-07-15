@@ -109,3 +109,62 @@ Stage Summary:
 - db.ts uses datasourceUrl to ensure reliable MongoDB connection even with stale env vars
 - Build scripts cleaned up for MongoDB (no more SQLite references)
 - Need: New GitHub token to push code, and Vercel env var update
+
+---
+Task ID: 2-b
+Agent: UI Fix Agent
+Task: Fix mobile bottom navigation bar - too expanded/takes too much space
+
+Work Log:
+- Read the bottom navigation bar code in src/app/page.tsx (lines 330-415)
+- Applied all 12 compacting changes to the mobile bottom nav:
+  1. Container padding: pt-1.5 pb-1 → pt-1 pb-0.5
+  2. Kept safe-area-inset-bottom style as-is
+  3. FAB offset: -mt-3 → -mt-2
+  4. FAB size: h-10 w-10 → h-9 w-9
+  5. FAB icon: h-5 w-5 → h-4 w-4
+  6. FAB label: text-[9px] → text-[8px]
+  7. Regular icons: h-[18px] w-[18px] → h-4 w-4
+  8. Regular labels: text-[9px] → text-[8px]
+  9. Button min-width: min-w-[44px] → min-w-[40px]
+  10. Button padding: px-2 py-1 → px-1.5 py-0.5
+  11. Button gap: gap-0.5 → gap-px
+  12. Badge: h-3.5 min-w-[14px] → h-3 min-w-[12px]
+- Updated main content bottom padding: pb-20 → pb-16
+- Ran lint check: only pre-existing build.cjs errors (unrelated)
+
+Stage Summary:
+- Mobile bottom nav bar made more compact with reduced padding, smaller icons, smaller text, and tighter spacing
+- Main content bottom padding reduced from pb-20 to pb-16 to match smaller nav bar
+- No new lint errors introduced
+
+---
+Task ID: 2-a
+Agent: Payment Method Agent
+Task: Add paymentMethod field to Invoice model across the SKM billing app
+
+Work Log:
+- Updated prisma/schema.prisma: Added `paymentMethod String @default("Cash")` field to Invoice model after paymentStatus field
+- Ran `prisma db push` successfully - database was already in sync (MongoDB Atlas)
+- Ran `prisma generate` to regenerate Prisma Client with the new field
+- Updated src/app/api/invoices/route.ts: Added `paymentMethod` to destructured body in POST handler, added `paymentMethod: paymentMethod || 'Cash'` to invoice.create data
+- Updated src/components/billing.tsx:
+  - Added `paymentMethod` state with `useState('Cash')`
+  - Added `paymentMethod` to invoiceData memo object and dependency array
+  - Added `paymentMethod` to invoicePayload object
+  - Added `setPaymentMethod('Cash')` to resetForm callback
+  - Added payment method selector UI (Cash/PhonePe/Google Pay buttons) in Financial Summary section after Grand Total and before Amount Paid
+- Updated src/components/invoice-preview.tsx:
+  - Added `paymentMethod?: string` to InvoiceData interface
+  - Added payment method display in preview after "Amount Paid" line (conditionally rendered)
+- Updated src/components/analytics.tsx:
+  - Added payment method badge next to payment status badge in completed bills card (only shown for non-Cash methods)
+  - Added `paymentMethod` to handleViewInvoice invoiceData object for invoice preview
+- Ran lint check: only pre-existing build.cjs errors (unrelated to changes)
+
+Stage Summary:
+- paymentMethod field added end-to-end: Prisma schema → API route → billing form → invoice preview → analytics
+- Default value is "Cash" for backward compatibility
+- UI includes 3 payment options: Cash, PhonePe, Google Pay
+- Payment method displayed on invoice preview and as badge in analytics (non-Cash only)
+- No new lint errors introduced

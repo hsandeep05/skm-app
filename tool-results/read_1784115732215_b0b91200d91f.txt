@@ -1,0 +1,681 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useCallback, useMemo } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { Plus, Trash2, Save, Send, Eye, EyeOff, FileText } from 'lucide-react'
+     6→     6→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     7→     7→import { Button } from '@/components/ui/button'
+     8→     8→import { Input } from '@/components/ui/input'
+     9→     9→import { Label } from '@/components/ui/label'
+    10→    10→import {
+    11→    11→  Select,
+    12→    12→  SelectContent,
+    13→    13→  SelectItem,
+    14→    14→  SelectTrigger,
+    15→    15→  SelectValue,
+    16→    16→} from '@/components/ui/select'
+    17→    17→import { ScrollArea } from '@/components/ui/scroll-area'
+    18→    18→import { Checkbox } from '@/components/ui/checkbox'
+    19→    19→import { Separator } from '@/components/ui/separator'
+    20→    20→import {
+    21→    21→  Dialog,
+    22→    22→  DialogContent,
+    23→    23→  DialogHeader,
+    24→    24→  DialogTitle,
+    25→    25→} from '@/components/ui/dialog'
+    26→    26→import { InvoicePreview, type InvoiceData } from '@/components/invoice-preview'
+    27→    27→import { useRealtime } from '@/hooks/use-realtime'
+    28→    28→import { saveOfflineInvoice, generateTempId, isOnline } from '@/lib/offline'
+    29→    29→import { performAutoBackup } from '@/lib/data-persistence'
+    30→    30→import { useToast } from '@/hooks/use-toast'
+    31→    31→
+    32→    32→const SERVICE_CATALOG = [
+    33→    33→  'Display (Combo)',
+    34→    34→  'Battery',
+    35→    35→  'Display Frame',
+    36→    36→  'Speakers',
+    37→    37→  'Mic',
+    38→    38→  'Power Button',
+    39→    39→  'Volume Up/Down Button',
+    40→    40→  'Back Panel',
+    41→    41→  'Full Body',
+    42→    42→  'Charging Pin',
+    43→    43→  'Motherboard Strip',
+    44→    44→  'CC Board',
+    45→    45→  'Back Cover',
+    46→    46→  'Tempered Glass',
+    47→    47→  'Motherboard Work',
+    48→    48→  'Battery Boost',
+    49→    49→  'Camera Glass',
+    50→    50→]
+    51→    51→
+    52→    52→interface LineItem {
+    53→    53→  id: string
+    54→    54→  description: string
+    55→    55→  costPrice: number
+    56→    56→  sellingPrice: number
+    57→    57→  isCustom: boolean
+    58→    58→  isFree: boolean
+    59→    59→}
+    60→    60→
+    61→    61→function formatCurrency(amount: number): string {
+    62→    62→  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    63→    63→}
+    64→    64→
+    65→    65→// Theme-aware input classes
+    66→    66→const inputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 h-9"
+    67→    67→const smallInputClass = "bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] hover:border-[#7C3AED]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 transition-all duration-200 text-sm h-8"
+    68→    68→
+    69→    69→export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; shopSettings?: { shopName: string; shopAddress: string; shopTagline: string } }) {
+    70→    70→  const [customerName, setCustomerName] = useState('')
+    71→    71→  const [customerPhone, setCustomerPhone] = useState('')
+    72→    72→  const [mobileName, setMobileName] = useState('')
+    73→    73→  const [billDate, setBillDate] = useState(() => new Date().toISOString().split('T')[0])
+    74→    74→  const [items, setItems] = useState<LineItem[]>([])
+    75→    75→  const [discount, setDiscount] = useState(0)
+    76→    76→  const [amountPaid, setAmountPaid] = useState(0)
+    77→    77→  const [totalPaidChecked, setTotalPaidChecked] = useState(false)
+    78→    78→  const [saving, setSaving] = useState(false)
+    79→    79→  const [visibleCostPrices, setVisibleCostPrices] = useState<Set<string>>(new Set())
+    80→    80→  const [showMobilePreview, setShowMobilePreview] = useState(false)
+    81→    81→  const [selectedService, setSelectedService] = useState('')
+    82→    82→  const { emitChange } = useRealtime()
+    83→    83→  const { toast } = useToast()
+    84→    84→
+    85→    85→  const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.sellingPrice, 0), [items])
+    86→    86→  const grandTotal = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount])
+    87→    87→  const balanceDue = useMemo(() => Math.max(0, grandTotal - amountPaid), [grandTotal, amountPaid])
+    88→    88→  const totalCost = useMemo(() => items.reduce((sum, item) => sum + item.costPrice, 0), [items])
+    89→    89→  const netProfit = useMemo(() => grandTotal - totalCost, [grandTotal, totalCost])
+    90→    90→
+    91→    91→  const addServiceItem = useCallback((serviceName: string) => {
+    92→    92→    const newItem: LineItem = {
+    93→    93→      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    94→    94→      description: serviceName,
+    95→    95→      costPrice: 0,
+    96→    96→      sellingPrice: 0,
+    97→    97→      isCustom: false,
+    98→    98→      isFree: false,
+    99→    99→    }
+   100→   100→    setItems((prev) => [...prev, newItem])
+   101→   101→  }, [])
+   102→   102→
+   103→   103→  const addCustomItem = useCallback(() => {
+   104→   104→    const newItem: LineItem = {
+   105→   105→      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+   106→   106→      description: '',
+   107→   107→      costPrice: 0,
+   108→   108→      sellingPrice: 0,
+   109→   109→      isCustom: true,
+   110→   110→      isFree: false,
+   111→   111→    }
+   112→   112→    setItems((prev) => [...prev, newItem])
+   113→   113→  }, [])
+   114→   114→
+   115→   115→  const removeItem = useCallback((id: string) => {
+   116→   116→    setItems((prev) => prev.filter((item) => item.id !== id))
+   117→   117→  }, [])
+   118→   118→
+   119→   119→  const updateItem = useCallback((id: string, field: keyof LineItem, value: string | number) => {
+   120→   120→    setItems((prev) =>
+   121→   121→      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+   122→   122→    )
+   123→   123→  }, [])
+   124→   124→
+   125→   125→  const invoiceData: InvoiceData = useMemo(() => ({
+   126→   126→    invoiceId: 'SRI-NEW',
+   127→   127→    customerName: customerName || 'Walk-in Customer',
+   128→   128→    customerPhone: customerPhone || undefined,
+   129→   129→    mobileName: mobileName || 'N/A',
+   130→   130→    date: billDate,
+   131→   131→    items: items.map((item) => ({
+   132→   132→      description: item.description,
+   133→   133→      costPrice: item.costPrice,
+   134→   134→      sellingPrice: item.sellingPrice,
+   135→   135→    })),
+   136→   136→    subtotal,
+   137→   137→    discount,
+   138→   138→    grandTotal,
+   139→   139→    amountPaid,
+   140→   140→    balanceDue,
+   141→   141→    shopLogo,
+   142→   142→    shopName: shopSettings?.shopName,
+   143→   143→    shopAddress: shopSettings?.shopAddress,
+   144→   144→    shopTagline: shopSettings?.shopTagline,
+   145→   145→  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo, shopSettings])
+   146→   146→
+   147→   147→  const resetForm = useCallback(() => {
+   148→   148→    setCustomerName('')
+   149→   149→    setCustomerPhone('')
+   150→   150→    setMobileName('')
+   151→   151→    setBillDate(new Date().toISOString().split('T')[0])
+   152→   152→    setItems([])
+   153→   153→    setDiscount(0)
+   154→   154→    setAmountPaid(0)
+   155→   155→    setTotalPaidChecked(false)
+   156→   156→    setSelectedService('')
+   157→   157→  }, [])
+   158→   158→
+   159→   159→  const saveInvoice = async (status: 'pending' | 'completed') => {
+   160→   160→    if (!mobileName.trim()) {
+   161→   161→      toast({
+   162→   162→        title: 'Validation Error',
+   163→   163→        description: 'Mobile Name is required',
+   164→   164→        variant: 'destructive',
+   165→   165→      })
+   166→   166→      return
+   167→   167→    }
+   168→   168→
+   169→   169→    if (items.length === 0) {
+   170→   170→      toast({
+   171→   171→        title: 'Validation Error',
+   172→   172→        description: 'Add at least one item',
+   173→   173→        variant: 'destructive',
+   174→   174→      })
+   175→   175→      return
+   176→   176→    }
+   177→   177→
+   178→   178→    const hasEmptyPrice = items.some(item => !item.isFree && (!item.sellingPrice || item.sellingPrice <= 0))
+   179→   179→    if (hasEmptyPrice) {
+   180→   180→      toast({
+   181→   181→        title: 'Validation Error',
+   182→   182→        description: 'All non-free items must have a selling price greater than 0',
+   183→   183→        variant: 'destructive',
+   184→   184→      })
+   185→   185→      return
+   186→   186→    }
+   187→   187→
+   188→   188→    setSaving(true)
+   189→   189→    const invoicePayload = {
+   190→   190→      customerName: customerName || 'Walk-in Customer',
+   191→   191→      customerPhone: customerPhone || null,
+   192→   192→      mobileName,
+   193→   193→      items: items.map((item) => ({
+   194→   194→        description: item.description,
+   195→   195→        costPrice: item.costPrice,
+   196→   196→        sellingPrice: item.sellingPrice,
+   197→   197→      })),
+   198→   198→      subtotal,
+   199→   199→      discount,
+   200→   200→      grandTotal,
+   201→   201→      amountPaid,
+   202→   202→      balanceDue,
+   203→   203→      calculatedNetProfit: netProfit,
+   204→   204→      paymentStatus: balanceDue <= 0 ? 'Paid' : amountPaid > 0 ? 'Partial' : 'Pending',
+   205→   205→      status,
+   206→   206→      date: billDate,
+   207→   207→      updatedBy: 'operator_primary',
+   208→   208→      tempId: generateTempId(),
+   209→   209→    }
+   210→   210→
+   211→   211→    try {
+   212→   212→      const res = await fetch('/api/invoices', {
+   213→   213→        method: 'POST',
+   214→   214→        headers: { 'Content-Type': 'application/json' },
+   215→   215→        credentials: 'include',
+   216→   216→        body: JSON.stringify(invoicePayload),
+   217→   217→      })
+   218→   218→
+   219→   219→      if (res.ok) {
+   220→   220→        const data = await res.json()
+   221→   221→        const invoice = data.invoice
+   222→   222→        try { emitChange({ type: status === 'completed' ? 'invoice-finalized' : 'invoice-created', invoiceId: invoice.invoiceId, timestamp: new Date().toISOString(), operator: 'operator_primary' }) } catch {}
+   223→   223→        toast({
+   224→   224→          title: status === 'completed' ? 'Bill Finalized!' : 'Saved as Pending',
+   225→   225→          description: `Invoice ${invoice.invoiceId} created successfully`,
+   226→   226→        })
+   227→   227→        performAutoBackup().catch(() => {})
+   228→   228→        resetForm()
+   229→   229→        return
+   230→   230→      }
+   231→   231→
+   232→   232→      // Server returned an error
+   233→   233→      let errorMsg = 'Failed to create invoice'
+   234→   234→      try {
+   235→   235→        const errorData = await res.json()
+   236→   236→        errorMsg = errorData.detail || errorData.error || errorMsg
+   237→   237→      } catch {}
+   238→   238→      
+   239→   239→      // If offline, save locally
+   240→   240→      if (!navigator.onLine) {
+   241→   241→        await saveOfflineInvoice({
+   242→   242→          id: invoicePayload.tempId,
+   243→   243→          tempId: invoicePayload.tempId,
+   244→   244→          syncStatus: 'pending',
+   245→   245→          date: billDate,
+   246→   246→          customerName: invoicePayload.customerName,
+   247→   247→          customerPhone: invoicePayload.customerPhone || undefined,
+   248→   248→          mobileName: invoicePayload.mobileName,
+   249→   249→          items: invoicePayload.items,
+   250→   250→          subtotal: invoicePayload.subtotal,
+   251→   251→          discount: invoicePayload.discount,
+   252→   252→          grandTotal: invoicePayload.grandTotal,
+   253→   253→          amountPaid: invoicePayload.amountPaid,
+   254→   254→          balanceDue: invoicePayload.balanceDue,
+   255→   255→          calculatedNetProfit: invoicePayload.calculatedNetProfit,
+   256→   256→          paymentStatus: invoicePayload.paymentStatus,
+   257→   257→          status: invoicePayload.status,
+   258→   258→          updatedBy: invoicePayload.updatedBy,
+   259→   259→          createdAt: new Date().toISOString(),
+   260→   260→        })
+   261→   261→        toast({
+   262→   262→          title: 'Saved Offline',
+   263→   263→          description: 'Invoice saved locally and will sync when online',
+   264→   264→        })
+   265→   265→        performAutoBackup().catch(() => {})
+   266→   266→        resetForm()
+   267→   267→        return
+   268→   268→      }
+   269→   269→
+   270→   270→      throw new Error(errorMsg)
+   271→   271→    } catch (err: any) {
+   272→   272→      console.error('Save error:', err)
+   273→   273→      toast({
+   274→   274→        title: 'Error',
+   275→   275→        description: err?.message || 'Failed to save invoice. Please try again.',
+   276→   276→        variant: 'destructive',
+   277→   277→      })
+   278→   278→    } finally {
+   279→   279→      setSaving(false)
+   280→   280→    }
+   281→   281→  }
+   282→   282→
+   283→   283→  return (
+   284→   284→    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+   285→   285→      {/* LEFT PANEL - Service Entry Module */}
+   286→   286→      <ScrollArea className="h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)]">
+   287→   287→        <div className="space-y-4 pr-2">
+   288→   288→          {/* Customer Info */}
+   289→   289→          <motion.div
+   290→   290→            initial={{ opacity: 0, y: 10 }}
+   291→   291→            animate={{ opacity: 1, y: 0 }}
+   292→   292→            transition={{ duration: 0.2 }}
+   293→   293→          >
+   294→   294→            <div className="overflow-hidden rounded-xl border border-[#7C3AED]/20 bg-card relative">
+   295→   295→              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA]" />
+   296→   296→              <div className="absolute top-0 right-0 w-32 h-32 bg-[#7C3AED]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+   297→   297→              <div className="p-5 pl-6">
+   298→   298→                <div className="flex items-center gap-2.5 mb-4">
+   299→   299→                  <div className="h-7 w-7 rounded-lg bg-[#7C3AED]/15 flex items-center justify-center ring-1 ring-[#7C3AED]/20">
+   300→   300→                    <span className="text-[#7C3AED] text-xs font-bold">C</span>
+   301→   301→                  </div>
+   302→   302→                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Customer Information</h3>
+   303→   303→                </div>
+   304→   304→                <div className="space-y-3">
+   305→   305→                  <div>
+   306→   306→                    <Label className="text-muted-foreground text-xs font-medium">Customer Name</Label>
+   307→   307→                    <Input
+   308→   308→                      value={customerName}
+   309→   309→                      onChange={(e) => setCustomerName(e.target.value)}
+   310→   310→                      placeholder="Walk-in Customer"
+   311→   311→                      className={inputClass}
+   312→   312→                    />
+   313→   313→                  </div>
+   314→   314→                  <div>
+   315→   315→                    <Label className="text-muted-foreground text-xs font-medium">Customer Phone (optional)</Label>
+   316→   316→                    <Input
+   317→   317→                      value={customerPhone}
+   318→   318→                      onChange={(e) => setCustomerPhone(e.target.value)}
+   319→   319→                      placeholder="Phone number"
+   320→   320→                      className={inputClass}
+   321→   321→                    />
+   322→   322→                  </div>
+   323→   323→                  <div>
+   324→   324→                    <Label className="text-muted-foreground text-xs font-medium">Mobile Name <span className="text-[#EF4444]">*</span></Label>
+   325→   325→                    <Input
+   326→   326→                      value={mobileName}
+   327→   327→                      onChange={(e) => setMobileName(e.target.value)}
+   328→   328→                      placeholder="e.g., Vivo Y21, Samsung S24"
+   329→   329→                      className={inputClass}
+   330→   330→                    />
+   331→   331→                  </div>
+   332→   332→                  <div>
+   333→   333→                    <Label className="text-muted-foreground text-xs font-medium">Bill Date</Label>
+   334→   334→                    <Input
+   335→   335→                      type="date"
+   336→   336→                      value={billDate}
+   337→   337→                      onChange={(e) => setBillDate(e.target.value)}
+   338→   338→                      className={inputClass}
+   339→   339→                    />
+   340→   340→                  </div>
+   341→   341→                </div>
+   342→   342→              </div>
+   343→   343→            </div>
+   344→   344→          </motion.div>
+   345→   345→
+   346→   346→          {/* Service Catalog */}
+   347→   347→          <motion.div
+   348→   348→            initial={{ opacity: 0, y: 10 }}
+   349→   349→            animate={{ opacity: 1, y: 0 }}
+   350→   350→            transition={{ duration: 0.2, delay: 0.05 }}
+   351→   351→          >
+   352→   352→            <div className="overflow-hidden rounded-xl border border-[#3B82F6]/20 bg-card relative">
+   353→   353→              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#3B82F6] to-[#60A5FA]" />
+   354→   354→              <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+   355→   355→              <div className="p-5 pl-6">
+   356→   356→                <div className="flex items-center gap-2.5 mb-4">
+   357→   357→                  <div className="h-7 w-7 rounded-lg bg-[#3B82F6]/15 flex items-center justify-center ring-1 ring-[#3B82F6]/20">
+   358→   358→                    <span className="text-[#3B82F6] text-xs font-bold">S</span>
+   359→   359→                  </div>
+   360→   360→                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Service Catalog</h3>
+   361→   361→                </div>
+   362→   362→                <Select value={selectedService} onValueChange={(value) => { addServiceItem(value); setSelectedService(''); }}>
+   363→   363→                  <SelectTrigger className="w-full bg-background border-border/70 text-foreground hover:border-[#3B82F6]/30 focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-200 h-9">
+   364→   364→                    <SelectValue placeholder="Select a service to add..." />
+   365→   365→                  </SelectTrigger>
+   366→   366→                  <SelectContent className="bg-card border-border">
+   367→   367→                    {SERVICE_CATALOG.map((service) => (
+   368→   368→                      <SelectItem key={service} value={service} className="text-foreground focus:bg-[#7C3AED]/20 focus:text-foreground">
+   369→   369→                        {service}
+   370→   370→                      </SelectItem>
+   371→   371→                    ))}
+   372→   372→                  </SelectContent>
+   373→   373→                </Select>
+   374→   374→                <Button
+   375→   375→                  variant="outline"
+   376→   376→                  size="sm"
+   377→   377→                  onClick={addCustomItem}
+   378→   378→                  className="mt-2 w-full border-[#7C3AED]/50 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-foreground gap-1"
+   379→   379→                >
+   380→   380→                  <Plus className="h-3.5 w-3.5" /> Add Custom Item
+   381→   381→                </Button>
+   382→   382→              </div>
+   383→   383→            </div>
+   384→   384→          </motion.div>
+   385→   385→
+   386→   386→          {/* Line Items */}
+   387→   387→          <motion.div
+   388→   388→            initial={{ opacity: 0, y: 10 }}
+   389→   389→            animate={{ opacity: 1, y: 0 }}
+   390→   390→            transition={{ duration: 0.2, delay: 0.1 }}
+   391→   391→          >
+   392→   392→            <div className="overflow-hidden rounded-xl border border-[#F59E0B]/20 bg-card relative">
+   393→   393→              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#F59E0B] to-[#FBBF24]" />
+   394→   394→              <div className="absolute top-0 right-0 w-32 h-32 bg-[#F59E0B]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+   395→   395→              <div className="p-5 pl-6">
+   396→   396→                <div className="flex items-center gap-2.5 mb-4">
+   397→   397→                  <div className="h-7 w-7 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center ring-1 ring-[#F59E0B]/20">
+   398→   398→                    <span className="text-[#F59E0B] text-xs font-bold">{items.length}</span>
+   399→   399→                  </div>
+   400→   400→                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Line Items</h3>
+   401→   401→                </div>
+   402→   402→                <div className="space-y-3">
+   403→   403→                  <AnimatePresence>
+   404→   404→                    {items.map((item, idx) => (
+   405→   405→                      <motion.div
+   406→   406→                        key={item.id}
+   407→   407→                        initial={{ opacity: 0, height: 0 }}
+   408→   408→                        animate={{ opacity: 1, height: 'auto' }}
+   409→   409→                        exit={{ opacity: 0, height: 0 }}
+   410→   410→                        className="bg-background rounded-lg p-3 border border-border/60 hover:border-[#F59E0B]/30 hover:shadow-sm transition-all duration-200 space-y-2"
+   411→   411→                      >
+   412→   412→                        <div className="flex items-center justify-between">
+   413→   413→                          <div className="flex items-center gap-2">
+   414→   414→                            <span className="text-[10px] font-bold text-[#7C3AED] bg-[#7C3AED]/10 px-1.5 py-0.5 rounded-md">#{idx + 1}</span>
+   415→   415→                            {item.isCustom && (
+   416→   416→                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA]">Custom</span>
+   417→   417→                            )}
+   418→   418→                            {item.isFree && (
+   419→   419→                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#10B981]/20 text-[#10B981]">Free</span>
+   420→   420→                            )}
+   421→   421→                            {item.description && (
+   422→   422→                              <span className="text-xs text-muted-foreground truncate max-w-[140px]">{item.description}</span>
+   423→   423→                            )}
+   424→   424→                          </div>
+   425→   425→                          <Button
+   426→   426→                            variant="ghost"
+   427→   427→                            size="icon"
+   428→   428→                            className="h-7 w-7 text-[#EF4444] hover:bg-[#EF4444]/10 hover:text-[#EF4444]"
+   429→   429→                            onClick={() => removeItem(item.id)}
+   430→   430→                          >
+   431→   431→                            <Trash2 className="h-3.5 w-3.5" />
+   432→   432→                          </Button>
+   433→   433→                        </div>
+   434→   434→                        <div>
+   435→   435→                          <Label className="text-muted-foreground text-[10px] font-medium">Description</Label>
+   436→   436→                          <Input
+   437→   437→                            value={item.description}
+   438→   438→                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+   439→   439→                            placeholder="Service description"
+   440→   440→                            readOnly={!item.isCustom}
+   441→   441→                            className={`${smallInputClass} disabled:opacity-80 disabled:text-muted-foreground`}
+   442→   442→                          />
+   443→   443→                        </div>
+   444→   444→                        <div className="grid grid-cols-2 gap-2 bg-muted/30 rounded-lg p-2 -mx-1">
+   445→   445→                          <div>
+   446→   446→                            <Label className="text-muted-foreground text-[10px] font-medium">Cost Price</Label>
+   447→   447→                            <div className="relative">
+   448→   448→                              <Input
+   449→   449→                                type={visibleCostPrices.has(item.id) ? 'number' : 'password'}
+   450→   450→                                value={item.costPrice || ''}
+   451→   451→                                onChange={(e) => updateItem(item.id, 'costPrice', parseFloat(e.target.value) || 0)}
+   452→   452→                                placeholder="₹0"
+   453→   453→                                className={`${smallInputClass} pr-8`}
+   454→   454→                              />
+   455→   455→                              <button
+   456→   456→                                type="button"
+   457→   457→                                onClick={() => {
+   458→   458→                                  setVisibleCostPrices((prev) => {
+   459→   459→                                    const next = new Set(prev)
+   460→   460→                                    if (next.has(item.id)) {
+   461→   461→                                      next.delete(item.id)
+   462→   462→                                    } else {
+   463→   463→                                      next.add(item.id)
+   464→   464→                                    }
+   465→   465→                                    return next
+   466→   466→                                  })
+   467→   467→                                }}
+   468→   468→                                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+   469→   469→                                tabIndex={-1}
+   470→   470→                              >
+   471→   471→                                {visibleCostPrices.has(item.id) ? (
+   472→   472→                                  <EyeOff className="h-3.5 w-3.5" />
+   473→   473→                                ) : (
+   474→   474→                                  <Eye className="h-3.5 w-3.5" />
+   475→   475→                                )}
+   476→   476→                              </button>
+   477→   477→                            </div>
+   478→   478→                          </div>
+   479→   479→                          <div>
+   480→   480→                            <Label className="text-muted-foreground text-[10px] font-medium">Selling Price {!item.isFree && <span className="text-[#EF4444]">*</span>}</Label>
+   481→   481→                            <Input
+   482→   482→                              type="number"
+   483→   483→                              value={item.isFree ? 0 : (item.sellingPrice || '')}
+   484→   484→                              onChange={(e) => updateItem(item.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
+   485→   485→                              placeholder="₹0"
+   486→   486→                              disabled={item.isFree}
+   487→   487→                              className={`${smallInputClass} ${item.isFree ? 'opacity-50 cursor-not-allowed' : ''}`}
+   488→   488→                            />
+   489→   489→                          </div>
+   490→   490→                        </div>
+   491→   491→                        {item.isCustom && (
+   492→   492→                          <div className="flex items-center gap-2 pt-1">
+   493→   493→                            <Checkbox
+   494→   494→                              id={`free-${item.id}`}
+   495→   495→                              checked={item.isFree}
+   496→   496→                              onCheckedChange={(checked) => {
+   497→   497→                                const isFree = checked === true
+   498→   498→                                setItems((prev) =>
+   499→   499→                                  prev.map((i) =>
+   500→   500→                                    i.id === item.id ? { ...i, isFree, sellingPrice: isFree ? 0 : i.sellingPrice } : i
+   501→   501→                                  )
+   502→   502→                                )
+   503→   503→                              }}
+   504→   504→                              className="border-[#10B981]/50 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] data-[state=checked]:text-white"
+   505→   505→                            />
+   506→   506→                            <Label htmlFor={`free-${item.id}`} className="text-muted-foreground text-xs font-medium cursor-pointer select-none">
+   507→   507→                              Free
+   508→   508→                            </Label>
+   509→   509→                          </div>
+   510→   510→                        )}
+   511→   511→                      </motion.div>
+   512→   512→                    ))}
+   513→   513→                  </AnimatePresence>
+   514→   514→                  {items.length === 0 && (
+   515→   515→                    <p className="text-muted-foreground text-xs text-center py-4">
+   516→   516→                      No items added. Select a service or add a custom item.
+   517→   517→                    </p>
+   518→   518→                  )}
+   519→   519→                </div>
+   520→   520→              </div>
+   521→   521→            </div>
+   522→   522→          </motion.div>
+   523→   523→
+   524→   524→          {/* Financial Summary */}
+   525→   525→          <motion.div
+   526→   526→            initial={{ opacity: 0, y: 10 }}
+   527→   527→            animate={{ opacity: 1, y: 0 }}
+   528→   528→            transition={{ duration: 0.2, delay: 0.15 }}
+   529→   529→          >
+   530→   530→            <div className="overflow-hidden rounded-xl border border-[#10B981]/20 bg-card relative">
+   531→   531→              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#10B981] to-[#34D399]" />
+   532→   532→              <div className="absolute top-0 right-0 w-32 h-32 bg-[#10B981]/[0.03] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+   533→   533→              <div className="p-5 pl-6">
+   534→   534→                <div className="flex items-center gap-2.5 mb-4">
+   535→   535→                  <div className="h-7 w-7 rounded-lg bg-[#10B981]/15 flex items-center justify-center ring-1 ring-[#10B981]/20">
+   536→   536→                    <span className="text-[#10B981] text-xs font-bold">₹</span>
+   537→   537→                  </div>
+   538→   538→                  <h3 className="text-foreground text-sm font-semibold tracking-tight">Financial Summary</h3>
+   539→   539→                </div>
+   540→   540→                <div className="space-y-3">
+   541→   541→                  <div className="flex justify-between text-sm">
+   542→   542→                    <span className="text-muted-foreground">Subtotal</span>
+   543→   543→                    <span className="text-foreground font-semibold">{formatCurrency(subtotal)}</span>
+   544→   544→                  </div>
+   545→   545→                  <div>
+   546→   546→                    <Label className="text-muted-foreground text-xs font-medium">Discount</Label>
+   547→   547→                    <Input
+   548→   548→                      type="number"
+   549→   549→                      value={discount || ''}
+   550→   550→                      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+   551→   551→                      placeholder="₹0"
+   552→   552→                      className={inputClass}
+   553→   553→                    />
+   554→   554→                  </div>
+   555→   555→                  <Separator className="bg-border" />
+   556→   556→                  <div className="flex justify-between items-center bg-[#10B981]/[0.07] -mx-2 px-3 py-2.5 rounded-lg">
+   557→   557→                    <span className="text-foreground font-bold text-sm">Grand Total</span>
+   558→   558→                    <span className="text-2xl font-bold text-[#10B981] tabular-nums">{formatCurrency(grandTotal)}</span>
+   559→   559→                  </div>
+   560→   560→                  <div>
+   561→   561→                    <Label className="text-muted-foreground text-xs font-medium">Amount Paid</Label>
+   562→   562→                    <Input
+   563→   563→                      type="number"
+   564→   564→                      value={amountPaid || ''}
+   565→   565→                      onChange={(e) => {
+   566→   566→                        const val = parseFloat(e.target.value) || 0
+   567→   567→                        setAmountPaid(val)
+   568→   568→                        setTotalPaidChecked(val >= grandTotal && grandTotal > 0)
+   569→   569→                      }}
+   570→   570→                      placeholder="₹0"
+   571→   571→                      className={inputClass}
+   572→   572→                    />
+   573→   573→                  </div>
+   574→   574→                  <div className="flex items-center gap-2.5">
+   575→   575→                    <Checkbox
+   576→   576→                      id="totalPaid"
+   577→   577→                      checked={totalPaidChecked}
+   578→   578→                      onCheckedChange={(checked) => {
+   579→   579→                        setTotalPaidChecked(checked === true)
+   580→   580→                        if (checked) {
+   581→   581→                          setAmountPaid(grandTotal)
+   582→   582→                        } else {
+   583→   583→                          setAmountPaid(0)
+   584→   584→                        }
+   585→   585→                      }}
+   586→   586→                      className="border-[#10B981]/50 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] data-[state=checked]:text-white"
+   587→   587→                    />
+   588→   588→                    <Label htmlFor="totalPaid" className="text-muted-foreground text-xs font-medium cursor-pointer select-none">
+   589→   589→                      Total Amount Paid
+   590→   590→                    </Label>
+   591→   591→                  </div>
+   592→   592→                  <div className="flex justify-between items-center p-2.5 rounded-lg border transition-all duration-300"
+   593→   593→                    style={{ 
+   594→   594→                      backgroundColor: balanceDue <= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)',
+   595→   595→                      borderColor: balanceDue <= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'
+   596→   596→                    }}
+   597→   597→                  >
+   598→   598→                    <span className="text-sm font-medium" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
+   599→   599→                      Balance Due
+   600→   600→                    </span>
+   601→   601→                    <span className="text-lg font-bold tabular-nums" style={{ color: balanceDue <= 0 ? '#10B981' : '#F59E0B' }}>
+   602→   602→                      {formatCurrency(balanceDue)}
+   603→   603→                    </span>
+   604→   604→                  </div>
+   605→   605→                </div>
+   606→   606→              </div>
+   607→   607→            </div>
+   608→   608→          </motion.div>
+   609→   609→
+   610→   610→          {/* Action Buttons */}
+   611→   611→          <div className="flex gap-3 pb-4">
+   612→   612→            <Button
+   613→   613→              variant="outline"
+   614→   614→              className="flex-1 border-border/70 text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:border-border gap-2 h-10 shadow-sm hover:shadow transition-all duration-200"
+   615→   615→              onClick={() => saveInvoice('pending')}
+   616→   616→              disabled={saving}
+   617→   617→            >
+   618→   618→              <Save className="h-4 w-4" /> Save as Pending
+   619→   619→            </Button>
+   620→   620→            <Button
+   621→   621→              className="flex-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-2 h-10 shadow-lg shadow-[#7C3AED]/25 hover:shadow-xl hover:shadow-[#7C3AED]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+   622→   622→              onClick={() => {
+   623→   623→                if (balanceDue > 0) {
+   624→   624→                  toast({
+   625→   625→                    title: 'Balance Due',
+   626→   626→                    description: 'Bill has balance due. Save as Pending first.',
+   627→   627→                    variant: 'destructive',
+   628→   628→                  })
+   629→   629→                  saveInvoice('pending')
+   630→   630→                } else {
+   631→   631→                  saveInvoice('completed')
+   632→   632→                }
+   633→   633→              }}
+   634→   634→              disabled={saving}
+   635→   635→            >
+   636→   636→              <Send className="h-4 w-4" /> {saving ? 'Processing...' : 'Finalize & Sync'}
+   637→   637→            </Button>
+   638→   638→          </div>
+   639→   639→
+   640→   640→          {/* Mobile Preview Button */}
+   641→   641→          <div className="lg:hidden pb-4">
+   642→   642→            <Button
+   643→   643→              variant="outline"
+   644→   644→              className="w-full border-[#7C3AED]/30 text-[#A78BFA] hover:bg-[#7C3AED]/10 hover:text-foreground gap-2 h-10"
+   645→   645→              onClick={() => setShowMobilePreview(true)}
+   646→   646→            >
+   647→   647→              <FileText className="h-4 w-4" /> Preview Bill
+   648→   648→            </Button>
+   649→   649→          </div>
+   650→   650→        </div>
+   651→   651→      </ScrollArea>
+   652→   652→
+   653→   653→      {/* RIGHT PANEL - Live Invoice Preview (Desktop) */}
+   654→   654→      <div className="hidden lg:block">
+   655→   655→        <div className="sticky top-20">
+   656→   656→          <h3 className="text-foreground text-sm font-semibold mb-3 flex items-center gap-2 tracking-tight">
+   657→   657→            <div className="h-6 w-6 rounded-md bg-[#7C3AED]/15 flex items-center justify-center ring-1 ring-[#7C3AED]/20">
+   658→   658→              <Eye className="h-3.5 w-3.5 text-[#7C3AED]" />
+   659→   659→            </div> Live Invoice Preview
+   660→   660→          </h3>
+   661→   661→          <div className="bg-background rounded-xl p-4 border border-border/60 shadow-sm max-h-[calc(100vh-12rem)] overflow-y-auto">
+   662→   662→            <InvoicePreview data={invoiceData} />
+   663→   663→          </div>
+   664→   664→        </div>
+   665→   665→      </div>
+   666→   666→
+   667→   667→      {/* Mobile Preview Dialog */}
+   668→   668→      <Dialog open={showMobilePreview} onOpenChange={setShowMobilePreview}>
+   669→   669→        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
+   670→   670→          <DialogHeader>
+   671→   671→            <DialogTitle className="text-foreground flex items-center gap-2">
+   672→   672→              <Eye className="h-4 w-4 text-[#7C3AED]" /> Invoice Preview
+   673→   673→            </DialogTitle>
+   674→   674→          </DialogHeader>
+   675→   675→          <InvoicePreview data={invoiceData} showDownload />
+   676→   676→        </DialogContent>
+   677→   677→      </Dialog>
+   678→   678→    </div>
+   679→   679→  )
+   680→   680→}
+   681→   681→

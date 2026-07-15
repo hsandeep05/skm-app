@@ -79,6 +79,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
   const [visibleCostPrices, setVisibleCostPrices] = useState<Set<string>>(new Set())
   const [showMobilePreview, setShowMobilePreview] = useState(false)
   const [selectedService, setSelectedService] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('Cash')
   const { emitChange } = useRealtime()
   const { toast } = useToast()
 
@@ -139,10 +140,11 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
     amountPaid,
     balanceDue,
     shopLogo,
+    paymentMethod,
     shopName: shopSettings?.shopName,
     shopAddress: shopSettings?.shopAddress,
     shopTagline: shopSettings?.shopTagline,
-  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, shopLogo, shopSettings])
+  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, paymentMethod, shopLogo, shopSettings])
 
   const resetForm = useCallback(() => {
     setCustomerName('')
@@ -154,6 +156,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
     setAmountPaid(0)
     setTotalPaidChecked(false)
     setSelectedService('')
+    setPaymentMethod('Cash')
   }, [])
 
   const saveInvoice = async (status: 'pending' | 'completed') => {
@@ -202,6 +205,7 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
       balanceDue,
       calculatedNetProfit: netProfit,
       paymentStatus: balanceDue <= 0 ? 'Paid' : amountPaid > 0 ? 'Partial' : 'Pending',
+      paymentMethod,
       status,
       date: billDate,
       updatedBy: 'operator_primary',
@@ -556,6 +560,25 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
                   <div className="flex justify-between items-center bg-[#10B981]/[0.07] -mx-2 px-3 py-2.5 rounded-lg">
                     <span className="text-foreground font-bold text-sm">Grand Total</span>
                     <span className="text-2xl font-bold text-[#10B981] tabular-nums">{formatCurrency(grandTotal)}</span>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs font-medium">Payment Method</Label>
+                    <div className="flex gap-2 mt-1">
+                      {['Cash', 'PhonePe', 'Google Pay'].map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setPaymentMethod(method)}
+                          className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 border ${
+                            paymentMethod === method
+                              ? 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-md shadow-[#7C3AED]/20'
+                              : 'bg-background text-muted-foreground border-border/60 hover:border-[#7C3AED]/30 hover:text-foreground'
+                          }`}
+                        >
+                          {method}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs font-medium">Amount Paid</Label>

@@ -289,6 +289,7 @@ export function Analytics() {
       shopName: shopInfo.shopName || undefined,
       shopAddress: shopInfo.shopAddress || undefined,
       shopTagline: shopInfo.shopTagline || undefined,
+      paymentMethod: bill.paymentMethod || undefined,
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)
@@ -587,15 +588,20 @@ export function Analytics() {
                             <span className="text-xs sm:text-sm font-extrabold text-foreground">
                               {formatCurrency(bill.grandTotal)}
                             </span>
-                            {bill.paymentStatus === 'Paid' ? (
-                              <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
-                                Paid
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
-                                {bill.paymentStatus}
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {bill.paymentStatus === 'Paid' ? (
+                                <Badge className="bg-[#10B981]/12 text-[#10B981] border-[#10B981]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+                                  Paid
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-[#F59E0B]/12 text-[#F59E0B] border-[#F59E0B]/20 text-[9px] sm:text-[10px] h-4 sm:h-5 px-1.5 sm:px-2 font-bold">
+                                  {bill.paymentStatus}
+                                </Badge>
+                              )}
+                              {bill.paymentMethod && bill.paymentMethod !== 'Cash' && (
+                                <span className="text-[8px] text-muted-foreground bg-muted/60 px-1 py-0.5 rounded">{bill.paymentMethod}</span>
+                              )}
+                            </div>
                           </div>
                         </motion.div>
                       ))}
