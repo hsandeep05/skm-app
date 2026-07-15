@@ -14,7 +14,6 @@ export function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showCredentials, setShowCredentials] = useState(false)
   const [loading, setLoading] = useState(false)
   const [setupError, setSetupError] = useState<string | null>(null)
   const { toast } = useToast()
@@ -158,27 +157,6 @@ export function Login({ onLogin }: LoginProps) {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-
-          {/* Default credentials hint - hidden by default, click to reveal */}
-          <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border/30">
-            <button
-              type="button"
-              onClick={() => setShowCredentials(!showCredentials)}
-              className="w-full text-[10px] text-muted-foreground text-center font-medium flex items-center justify-center gap-1.5 hover:text-muted-foreground/80 transition-colors"
-            >
-              {showCredentials ? (
-                <>
-                  <EyeOff className="h-3 w-3" />
-                  Default: <span className="text-foreground/80 select-all">SriKrishna</span> / <span className="text-foreground/80 select-all">Krishna@123</span>
-                </>
-              ) : (
-                <>
-                  <Eye className="h-3 w-3" />
-                  Tap to show default credentials
-                </>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* Footer */}

@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
       calculatedNetProfit,
       paymentStatus,
       paymentMethod,
+      cashPaid,
+      onlinePaid,
       status,
       updatedBy,
       tempId,
@@ -124,6 +126,8 @@ export async function POST(request: NextRequest) {
         calculatedNetProfit: safeNumber(calculatedNetProfit),
         paymentStatus: paymentStatus || (safeNumber(balanceDue) > 0 ? 'Partial' : 'Paid'),
         paymentMethod: paymentMethod || 'Cash',
+        cashPaid: safeNumber(cashPaid),
+        onlinePaid: safeNumber(onlinePaid),
         status: status || 'pending',
         updatedBy: updatedBy || 'operator_primary',
         items: {

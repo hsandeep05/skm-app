@@ -73,18 +73,19 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
   const [billDate, setBillDate] = useState(() => new Date().toISOString().split('T')[0])
   const [items, setItems] = useState<LineItem[]>([])
   const [discount, setDiscount] = useState(0)
-  const [amountPaid, setAmountPaid] = useState(0)
   const [totalPaidChecked, setTotalPaidChecked] = useState(false)
   const [saving, setSaving] = useState(false)
   const [visibleCostPrices, setVisibleCostPrices] = useState<Set<string>>(new Set())
   const [showMobilePreview, setShowMobilePreview] = useState(false)
   const [selectedService, setSelectedService] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('Cash')
+  const [cashPaid, setCashPaid] = useState(0)
+  const [onlinePaid, setOnlinePaid] = useState(0)
   const { emitChange } = useRealtime()
   const { toast } = useToast()
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.sellingPrice, 0), [items])
   const grandTotal = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount])
+  const amountPaid = useMemo(() => cashPaid + onlinePaid, [cashPaid, onlinePaid])
   const balanceDue = useMemo(() => Math.max(0, grandTotal - amountPaid), [grandTotal, amountPaid])
   const totalCost = useMemo(() => items.reduce((sum, item) => sum + item.costPrice, 0), [items])
   const netProfit = useMemo(() => grandTotal - totalCost, [grandTotal, totalCost])
@@ -140,11 +141,12 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
     amountPaid,
     balanceDue,
     shopLogo,
-    paymentMethod,
+    cashPaid,
+    onlinePaid,
     shopName: shopSettings?.shopName,
     shopAddress: shopSettings?.shopAddress,
     shopTagline: shopSettings?.shopTagline,
-  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, paymentMethod, shopLogo, shopSettings])
+  }), [customerName, customerPhone, mobileName, billDate, items, subtotal, discount, grandTotal, amountPaid, balanceDue, cashPaid, onlinePaid, shopLogo, shopSettings])
 
   const resetForm = useCallback(() => {
     setCustomerName('')
@@ -153,10 +155,10 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
     setBillDate(new Date().toISOString().split('T')[0])
     setItems([])
     setDiscount(0)
-    setAmountPaid(0)
+    setCashPaid(0)
+    setOnlinePaid(0)
     setTotalPaidChecked(false)
     setSelectedService('')
-    setPaymentMethod('Cash')
   }, [])
 
   const saveInvoice = async (status: 'pending' | 'completed') => {
@@ -205,7 +207,9 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
       balanceDue,
       calculatedNetProfit: netProfit,
       paymentStatus: balanceDue <= 0 ? 'Paid' : amountPaid > 0 ? 'Partial' : 'Pending',
-      paymentMethod,
+      paymentMethod: cashPaid > 0 && onlinePaid > 0 ? 'Split' : onlinePaid > 0 ? 'Online' : 'Cash',
+      cashPaid,
+      onlinePaid,
       status,
       date: billDate,
       updatedBy: 'operator_primary',
@@ -561,56 +565,61 @@ export function Billing({ shopLogo, shopSettings }: { shopLogo?: string | null; 
                     <span className="text-foreground font-bold text-sm">Grand Total</span>
                     <span className="text-2xl font-bold text-[#10B981] tabular-nums">{formatCurrency(grandTotal)}</span>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs font-medium">Payment Method</Label>
-                    <div className="flex gap-2 mt-1">
-                      {['Cash', 'PhonePe', 'Google Pay'].map((method) => (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setPaymentMethod(method)}
-                          className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 border ${
-                            paymentMethod === method
-                              ? 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-md shadow-[#7C3AED]/20'
-                              : 'bg-background text-muted-foreground border-border/60 hover:border-[#7C3AED]/30 hover:text-foreground'
-                          }`}
-                        >
-                          {method}
-                        </button>
-                      ))}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-muted-foreground text-xs font-medium">Cash Paid</Label>
+                        <Input
+                          type="number"
+                          value={cashPaid || ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0
+                            setCashPaid(val)
+                            setTotalPaidChecked(val + onlinePaid >= grandTotal && grandTotal > 0)
+                          }}
+                          placeholder="₹0"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs font-medium">Online Paid (PhonePe/GPay)</Label>
+                        <Input
+                          type="number"
+                          value={onlinePaid || ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0
+                            setOnlinePaid(val)
+                            setTotalPaidChecked(cashPaid + val >= grandTotal && grandTotal > 0)
+                          }}
+                          placeholder="₹0"
+                          className={inputClass}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs font-medium">Amount Paid</Label>
-                    <Input
-                      type="number"
-                      value={amountPaid || ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0
-                        setAmountPaid(val)
-                        setTotalPaidChecked(val >= grandTotal && grandTotal > 0)
-                      }}
-                      placeholder="₹0"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <Checkbox
-                      id="totalPaid"
-                      checked={totalPaidChecked}
-                      onCheckedChange={(checked) => {
-                        setTotalPaidChecked(checked === true)
-                        if (checked) {
-                          setAmountPaid(grandTotal)
-                        } else {
-                          setAmountPaid(0)
-                        }
-                      }}
-                      className="border-[#10B981]/50 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] data-[state=checked]:text-white"
-                    />
-                    <Label htmlFor="totalPaid" className="text-muted-foreground text-xs font-medium cursor-pointer select-none">
-                      Total Amount Paid
-                    </Label>
+                    <div className="flex justify-between text-sm bg-muted/40 -mx-2 px-3 py-2 rounded-lg">
+                      <span className="text-muted-foreground">Total Paid</span>
+                      <span className="text-foreground font-bold">{formatCurrency(amountPaid)}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <Checkbox
+                        id="totalPaid"
+                        checked={totalPaidChecked}
+                        onCheckedChange={(checked) => {
+                          setTotalPaidChecked(checked === true)
+                          if (checked) {
+                            setCashPaid(grandTotal)
+                            setOnlinePaid(0)
+                          } else {
+                            setCashPaid(0)
+                            setOnlinePaid(0)
+                          }
+                        }}
+                        className="border-[#10B981]/50 data-[state=checked]:bg-[#10B981] data-[state=checked]:border-[#10B981] data-[state=checked]:text-white"
+                      />
+                      <Label htmlFor="totalPaid" className="text-muted-foreground text-xs font-medium cursor-pointer select-none">
+                        Total Amount Paid
+                      </Label>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center p-2.5 rounded-lg border transition-all duration-300"
                     style={{ 

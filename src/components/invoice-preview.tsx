@@ -29,6 +29,8 @@ export interface InvoiceData {
   shopAddress?: string
   shopTagline?: string
   paymentMethod?: string
+  cashPaid?: number
+  onlinePaid?: number
 }
 
 function formatCurrency(amount: number): string {
@@ -208,10 +210,22 @@ export function InvoicePreview({ data, showDownload = false }: { data: InvoiceDa
               <span>Amount Paid:</span>
               <span>{formatCurrency(data.amountPaid)}</span>
             </div>
-            {data.paymentMethod && (
+            {data.paymentMethod && data.paymentMethod !== 'Cash' && (
               <div className="flex justify-between text-xs">
-                <span className="text-gray-500">Payment Method</span>
-                <span className="font-medium text-gray-800">{data.paymentMethod}</span>
+                <span className="text-gray-500">Payment Mode</span>
+                <span className="font-medium text-gray-800">{data.paymentMethod === 'Split' ? 'Cash + Online' : data.paymentMethod === 'Online' ? 'PhonePe/GPay' : data.paymentMethod}</span>
+              </div>
+            )}
+            {(data.cashPaid !== undefined && data.cashPaid > 0) && (
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Cash Paid</span>
+                <span className="font-medium text-gray-800">{formatCurrency(data.cashPaid)}</span>
+              </div>
+            )}
+            {(data.onlinePaid !== undefined && data.onlinePaid > 0) && (
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Online Paid</span>
+                <span className="font-medium text-gray-800">{formatCurrency(data.onlinePaid)}</span>
               </div>
             )}
             <div

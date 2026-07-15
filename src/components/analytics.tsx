@@ -290,6 +290,8 @@ export function Analytics() {
       shopAddress: shopInfo.shopAddress || undefined,
       shopTagline: shopInfo.shopTagline || undefined,
       paymentMethod: bill.paymentMethod || undefined,
+      cashPaid: bill.cashPaid || undefined,
+      onlinePaid: bill.onlinePaid || undefined,
     }
     setSelectedInvoice(invoiceData)
     setModalOpen(true)
@@ -599,7 +601,9 @@ export function Analytics() {
                                 </Badge>
                               )}
                               {bill.paymentMethod && bill.paymentMethod !== 'Cash' && (
-                                <span className="text-[8px] text-muted-foreground bg-muted/60 px-1 py-0.5 rounded">{bill.paymentMethod}</span>
+                                <span className="text-[8px] text-muted-foreground bg-muted/60 px-1 py-0.5 rounded">
+                                  {bill.paymentMethod === 'Split' ? 'Cash+Online' : bill.paymentMethod === 'Online' ? 'Online' : bill.paymentMethod}
+                                </span>
                               )}
                             </div>
                           </div>
