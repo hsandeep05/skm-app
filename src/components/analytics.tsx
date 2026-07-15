@@ -529,7 +529,7 @@ export function Analytics() {
             ) : (
               <>
                 <div
-                  className="overflow-y-auto max-h-[40vh] sm:max-h-[55vh] md:max-h-[65vh] pr-1
+                  className="overflow-y-auto max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] pr-1
                              scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent
                              [-webkit-overflow-scrolling:touch]"
                   style={{
